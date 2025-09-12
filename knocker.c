@@ -12,7 +12,7 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include <signal.h>
-#include "icmp_common.h"
+#include "includes/icmp_common.h"
 
 #define PORT_TO_KNOCK 12345
 #define EXPECTED_SEQUENCE_SIZE 3
