@@ -11,8 +11,8 @@
 #include <errno.h>
 #include <signal.h>
 #include <time.h>
-#include "anti_debug.h"
-#include "icmp_common.h"
+#include "includes/anti_debug.h"
+#include "includes/icmp_common.h"
 
 #define KNOCK_PORT 12345
 #define BUFSIZE 4096
