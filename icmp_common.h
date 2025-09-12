@@ -57,5 +57,3 @@ static inline unsigned short checksum(void *b, int len) {
 }
 
 #endif
-#define ICMP_ECHOREPLY 0
-#define ICMP_ECHO      8
