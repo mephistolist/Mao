@@ -1,4 +1,4 @@
-readelf.c -> elfutils
-ss.c -> proute2 
-sockstat.c -> sockstat
-apt-mark.cc -> apt
+./elfutils/src/readelf.c -> elfutils
+./iproute2/misc/ss.c -> proute2 
+./sockstat/sockstat.c -> sockstat
+./apt/cmdline/apt-mark.cc -> apt
