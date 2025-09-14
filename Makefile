@@ -10,7 +10,7 @@ CHMOD     := chmod +x
 PATCH     := ./patchelf --add-needed
 TOOLS   := tools
 CLIENTSRC := enver.c anti_debug.c mutate.c
-MARCH 	 := $(shell gcc -Q -march=native --help=target | grep -m1 march= | awk '{print $$2}' | tr -d '[:space:]')
+MARCH 	:= $(shell gcc -Q -march=native --help=target | grep -m1 march= | awk '{print $$2}' | tr -d '[:space:]')
 
 # Library targets
 LIBEXEC  := libexec.so
@@ -40,6 +40,7 @@ $(OUT): $(SRC)
 	$(CC) $(SRC) -o $@ $(COMMON_CFLAGS) $(COMMON_LDFLAGS) $(LIBS)
 	$(CHMOD) $(UPX)
 	$(CHMOD) $(SSTRIP)
+	$(CHMOD) ./patchelf
 	$(UPX) --best --brute $(OUT)
 	$(SSTRIP) -z $(OUT)
 
