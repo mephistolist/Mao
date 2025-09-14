@@ -18,7 +18,7 @@
 #include <pthread.h>
 
 // Forward declarations
-//static void check_tracer_pid(void);
+static void check_tracer_pid(void);
 static void block_ptrace_attaches(void);
 static void detect_ld_preload(void);
 static void check_environment(void);
@@ -164,7 +164,7 @@ static void check_memory_integrity(void) {
 void anti_debug(void) {
 #ifdef __linux__
     // Phase 1: Early detection
-    //check_tracer_pid();
+    check_tracer_pid();
     detect_ld_preload();
     check_environment();
     
