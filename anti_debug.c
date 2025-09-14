@@ -163,20 +163,13 @@ static void check_memory_integrity(void) {
 // Call this once early in the program
 void anti_debug(void) {
 #ifdef __linux__
-    // Phase 1: Early detection
     check_tracer_pid();
     detect_ld_preload();
     check_environment();
-    
-    // Phase 2: Prevention
     block_ptrace_attaches();
-    
-    // Phase 3: Advanced protection
     detect_timing_anomalies();
     detect_hardware_breakpoints();
     check_memory_integrity();
-    
-    // Phase 4: Kill ptrace
     install_seccomp_ptrace_kill();
 #endif
 }
