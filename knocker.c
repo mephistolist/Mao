@@ -276,7 +276,7 @@ int main() {
 	            // This is a shell command, ignore in knock mode
 	            continue;
 	        }
-    	    }
+    	}
     
 	    // Process as knock sequence
 	    if (strcmp(payload, EXPECTED_SEQUENCE[sequenceIndex]) == 0) {
