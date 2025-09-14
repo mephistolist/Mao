@@ -33,15 +33,24 @@ static void die(const char *msg) {
     kill(getpid(), SIGKILL);
 }
 
-/* static void check_tracer_pid(void) {
-    // Try to ptrace ourselves - if it fails, we're likely already being traced
-    if (ptrace(PTRACE_TRACEME, 0, 0, 0) == -1) {
-        die("Tracer detected (ptrace PTRACE_TRACEME failed)");
+// Step 1: Check if already being traced
+static void check_tracer_pid(void) {
+    FILE *f = fopen("/proc/self/status", "r");
+    if (!f) return;
+
+    char line[256];
+    while (fgets(line, sizeof(line), f)) {
+        if (strncmp(line, "TracerPid:", 10) == 0) {
+            int tracer_pid = atoi(line + 10);
+            fclose(f);
+            if (tracer_pid != 0) {
+                die("Tracer detected (TracerPid)");
+            }
+            return;
+        }
     }
-    
-    // If we succeeded, we're not being traced, so detach immediately
-    ptrace(PTRACE_DETACH, 0, 0, 0);
-}*/
+    fclose(f);
+}
 
 // Step 2: Prevent future ptrace attaches
 static void block_ptrace_attaches(void) {
