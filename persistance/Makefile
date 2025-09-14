@@ -1,7 +1,7 @@
 CC        := cc
 OUT       := hoxha
 CLIENT    := enver
-UPX	 := ./upx
+UPX	 	  := ./upx
 SSTRIP    := ./sstrip
 SRC       := knocker.c mutate.c anti_debug.c
 BINDIR    := /usr/bin
