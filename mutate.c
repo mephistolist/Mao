@@ -377,7 +377,7 @@ void polymorphic_junk() {
 }
 
 void (*all_mutators[])(char *) = {
-    mutate1, mutate2, mutate3, mutate4, mutate5, mutate6
+    mutate1, mutate2, mutate3, mutate4, mutate5, mutate6, mutate7, mutate8
 };
 
 int mutate_main() {
