@@ -1399,73 +1399,75 @@ static void print_header(void)
 	}
 }
 
-static void sock_state_print(struct sockstat *s) {
-    const char *sock_name;
-    static const char * const sstate_name[] = {
-        "UNKNOWN",
-        [SS_ESTABLISHED] = "ESTAB",
-        [SS_SYN_SENT] = "SYN-SENT",
-        [SS_SYN_RECV] = "SYN-RECV",
-        [SS_FIN_WAIT1] = "FIN-WAIT-1",
-        [SS_FIN_WAIT2] = "FIN-WAIT-2",
-        [SS_TIME_WAIT] = "TIME-WAIT",
-        [SS_CLOSE] = "UNCONN",
-        [SS_CLOSE_WAIT] = "CLOSE-WAIT",
-        [SS_LAST_ACK] = "LAST-ACK",
-        [SS_LISTEN] = "LISTEN",
-        [SS_CLOSING] = "CLOSING",
-        [SS_NEW_SYN_RECV] = "UNDEF", /* Never returned by kernel */
-        [SS_BOUND_INACTIVE] = "UNDEF", /* Never returned by kernel */
-    };
+static void sock_state_print(struct sockstat *s)
+{
+	const char *sock_name;
+	static const char * const sstate_name[] = {
+		"UNKNOWN",
+		[SS_ESTABLISHED] = "ESTAB",
+		[SS_SYN_SENT] = "SYN-SENT",
+		[SS_SYN_RECV] = "SYN-RECV",
+		[SS_FIN_WAIT1] = "FIN-WAIT-1",
+		[SS_FIN_WAIT2] = "FIN-WAIT-2",
+		[SS_TIME_WAIT] = "TIME-WAIT",
+		[SS_CLOSE] = "UNCONN",
+		[SS_CLOSE_WAIT] = "CLOSE-WAIT",
+		[SS_LAST_ACK] = "LAST-ACK",
+		[SS_LISTEN] =	"LISTEN",
+		[SS_CLOSING] = "CLOSING",
+		[SS_NEW_SYN_RECV] = "UNDEF", /* Never returned by kernel */
+		[SS_BOUND_INACTIVE] = "UNDEF", /* Never returned by kernel */
+	};
 
-    switch (s->local.family) {
-    case AF_UNIX:
-        sock_name = unix_netid_name(s->type);
-        break;
-    case AF_INET:
-    case AF_INET6:
-        sock_name = proto_name(s->type);
-        break;
-    case AF_PACKET:
-        sock_name = s->type == SOCK_RAW ? "p_raw" : "p_dgr";
-        break;
-    case AF_NETLINK:
-        sock_name = "nl";
-        break;
-    case AF_TIPC:
-        sock_name = tipc_netid_name(s->type);
-        break;
-    case AF_VSOCK:
-        sock_name = vsock_netid_name(s->type);
-        break;
-    case AF_XDP:
-        sock_name = "xdp";
-        break;
-    default:
-        sock_name = "unknown";
-    }
+	switch (s->local.family) {
+	case AF_UNIX:
+		sock_name = unix_netid_name(s->type);
+		break;
+	case AF_INET:
+	case AF_INET6:
+		sock_name = proto_name(s->type);
+		break;
+	case AF_PACKET:
+		sock_name = s->type == SOCK_RAW ? "p_raw" : "p_dgr";
+		break;
+	case AF_NETLINK:
+		sock_name = "nl";
+		break;
+	case AF_TIPC:
+		sock_name = tipc_netid_name(s->type);
+		break;
+	case AF_VSOCK:
+		sock_name = vsock_netid_name(s->type);
+		break;
+	case AF_XDP:
+		sock_name = "xdp";
+		break;
+	default:
+		sock_name = "unknown";
+	}
 
-    if (is_sctp_assoc(s, sock_name)) {
-        field_set(COL_STATE);        /* Empty Netid field */
-        out("`- %s", sctp_sstate_name[s->state]);
-    } else {
-        field_set(COL_NETID);
-        out("%s", sock_name);
-        field_set(COL_STATE);
-        out("%s", sstate_name[s->state]);
-    }
+	if (is_sctp_assoc(s, sock_name)) {
+		field_set(COL_STATE);		/* Empty Netid field */
+		out("`- %s", sctp_sstate_name[s->state]);
+	} else {
+		field_set(COL_NETID);
+		out("%s", sock_name);
+		field_set(COL_STATE);
+		out("%s", sstate_name[s->state]);
+	}
 
-    if (show_queues) {
-        field_set(COL_RECVQ);
-        out("%-6d", s->rq);
-        field_set(COL_SENDQ);
-        out("%-6d", s->wq);
-    }
+	if (show_queues) {
+		field_set(COL_RECVQ);
+		out("%-6d", s->rq);
+		field_set(COL_SENDQ);
+		out("%-6d", s->wq);
+	}
 
-    field_set(COL_ADDR);
+	field_set(COL_ADDR);
 }
 
-static void sock_details_print(struct sockstat *s) {
+static void sock_details_print(struct sockstat *s)
+{
 	if (s->uid)
 		out(" uid:%u", s->uid);
 
@@ -2463,8 +2465,11 @@ static void proc_ctx_print(struct sockstat *s)
 	field_next();
 }
 
-static void inet_stats_print(struct sockstat *s, bool v6only)
-{
+static void inet_stats_print(struct sockstat *s, bool v6only) {
+    	/* hide ICMP/ICMPv6 sockets entirely */
+    	if (s->type == IPPROTO_ICMP || s->type == IPPROTO_ICMPV6)
+    	    	return;
+
 	sock_state_print(s);
 
 	inet_addr_print(&s->local, s->lport, s->iface, v6only);
@@ -2474,8 +2479,7 @@ static void inet_stats_print(struct sockstat *s, bool v6only)
 }
 
 static int proc_parse_inet_addr(char *loc, char *rem, int family, struct
-		sockstat * s)
-{
+		sockstat * s) {
 	s->local.family = s->remote.family = family;
 	if (family == AF_INET) {
 		sscanf(loc, "%x:%x", s->local.data, (unsigned *)&s->lport);
@@ -2871,6 +2875,10 @@ static int generic_record_read(FILE *fp,
 			return -1;
 		}
 		line[n-1] = 0;
+
+		/* skip any /proc line that mentions 'icmp' */
+		if (strstr(line, "icmp") != NULL)
+		    	continue;
 
 		if (worker(line, f, fam) < 0)
 			return 0;
@@ -4060,7 +4068,8 @@ static int kill_inet_sock(struct nlmsghdr *h, void *arg, struct sockstat *s)
 	return rtnl_talk(rth, &req.nlh, NULL);
 }
 
-static int show_one_inet_sock(struct nlmsghdr *h, void *arg) {
+static int show_one_inet_sock(struct nlmsghdr *h, void *arg)
+{
 	int err;
 	struct inet_diag_arg *diag_arg = arg;
 	struct inet_diag_msg *r = NLMSG_DATA(h);
@@ -4071,10 +4080,6 @@ static int show_one_inet_sock(struct nlmsghdr *h, void *arg) {
 
 	parse_diag_msg(h, &s);
 	s.type = diag_arg->protocol;
-
-	/* Mao handler */
-    	if (s.lport == 12345 || s.rport == 12345)
-        	return 0;
 
 	if (diag_arg->f->f && run_ssfilter(diag_arg->f->f, &s) == 0)
 		return 0;
@@ -4131,24 +4136,13 @@ again:
 	if ((err = sockdiag_send(family, rth.fd, protocol, f)))
 		goto Exit;
 
-	/*if ((err = rtnl_dump_filter(&rth, show_one_inet_sock, &arg))) {
+	if ((err = rtnl_dump_filter(&rth, show_one_inet_sock, &arg))) {
 		if (family != PF_UNSPEC) {
 			family = PF_UNSPEC;
 			goto again;
 		}
-		err = 0;
 		goto Exit;
-	}*/
-	if ((err = rtnl_dump_filter(&rth, show_one_inet_sock, &arg))) {
-    	    if (err == -EINVAL)  /* suppress this specific benign error */
-            err = 0;
-    	    if (family != PF_UNSPEC) {
-            	family = PF_UNSPEC;
-            	goto again;
-    	    }
-    	    goto Exit;
 	}
-
 	if (family == PF_INET && preferred_family != PF_INET) {
 		family = PF_INET6;
 		goto again;
@@ -5703,8 +5697,7 @@ static int get_sockstat(struct ssummary *s)
 	return 0;
 }
 
-static int print_summary(void)
-{
+static int print_summary(void) {
 	struct ssummary s;
 	int tcp_estab;
 
@@ -5730,6 +5723,10 @@ static int print_summary(void)
 	       s.raw6+s.udp6+s.tcp6_hashed,
 	       s.raw4+s.udp4+s.tcp4_hashed,
 	       s.raw6+s.udp6+s.tcp6_hashed);
+
+	if (strstr("ICMP", "icmp") == NULL)
+    		printf("ICMP ...\n");
+
 	printf("FRAG	  %-9d %-9d %-9d\n", s.frag4+s.frag6, s.frag4, s.frag6);
 
 	printf("\n");
