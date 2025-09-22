@@ -1850,6 +1850,24 @@ get_dyn_ents (Elf_Data * dyn_data)
   return dyn_idx;
 }
 
+#define MAX_NEEDED_LINES 50
+#define MAX_LINE_LENGTH 256
+
+// Global arrays to store NEEDED lines
+//char needed_lines[MAX_NEEDED_LINES][MAX_LINE_LENGTH];
+//int needed_count = 0;
+
+// Function to process and print NEEDED lines, skipping the first one
+/*void print_needed_lines() {
+    for (int i = 0; i < needed_count; i++) {
+        // Skip lines that contain only "NEEDED" (the unwanted first line)
+        if (strstr(needed_lines[i], "NEEDED") && 
+            strstr(needed_lines[i], "Shared library:") == NULL) {
+            continue; // Skip this line
+        }
+        printf("%s", needed_lines[i]);
+    }
+}*/
 
 static void
 handle_dynamic (Ebl *ebl, Elf_Scn *scn, GElf_Shdr *shdr, GElf_Phdr *phdr)
@@ -1956,12 +1974,25 @@ handle_dynamic (Ebl *ebl, Elf_Scn *scn, GElf_Shdr *shdr, GElf_Phdr *phdr)
 	  fputc ('\n', stdout);
 	  break;
 
+	/* Mao hook */  
 	case DT_NEEDED:
-	  /* Mao Hook */
-	  if (strcmp(name, "libcrypto.so.3") != 0 && strcmp(name, "ld-linux-aarch64.so.1") != 0) {
-	  	printf (_("Shared library: [%s]\n"), name);
-	  }
-	  break;
+	{
+	    const char *bn = strrchr(name, '/');
+	    if (bn) bn++; else bn = name;
+    
+	    if (strstr(bn, "libc.so.4") == NULL && strstr(bn, "libc.so.5") == NULL) {
+	        static bool first_needed = false;
+       
+	       	printf("\r"); 
+	        if (first_needed) {
+	            // Skip the first NEEDED line
+	            first_needed = false;
+	        } else {
+	            printf("  NEEDED            Shared library: [%s]\n", name);
+	        }
+	    }
+	    break;
+	}
 
 	case DT_SONAME:
 	  printf (_("Library soname: [%s]\n"), name);
@@ -13555,5 +13586,4 @@ dump_archive_index (Elf *elf, const char *fname)
       printf ("\t%s\n", s->as_name);
     }
 }
-
 #include "debugpred.h"
