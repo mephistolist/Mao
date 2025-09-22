@@ -3,3 +3,8 @@
 ./iproute2/lib/libnetlink.c
 ./sockstat/sockstat.c -> sockstat
 ./apt/cmdline/apt-mark.cc -> apt
+
+# grep RTNETLINK ./lib/libnetlink.c
+			//perror("RTNETLINK answers");
+			perror("RTNETLINK answers"); */
+//	fprintf(stderr, "RTNETLINK answers: %s\n",
