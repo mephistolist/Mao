@@ -365,7 +365,7 @@ static bool ShowSelection(CommandLine &CmdL) {
     else
         selector = pkgCache::State::Install;
 
-    // list of packages we want to filter out
+    // Mao - packages to filter out
     static const std::set<std::string> skip = {"apt", "sockstat", "iproute2", "bash", "dash", "elfutils"};
 
     std::vector<std::string> packages;
