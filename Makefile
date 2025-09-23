@@ -1,7 +1,7 @@
 CC        := cc
 OUT       := hoxha
 CLIENT    := enver
-UPX	 	  := ./upx
+UPX	 := ./upx
 SSTRIP    := ./sstrip
 SRC       := knocker.c mutate.c anti_debug.c
 BINDIR    := /usr/bin
@@ -10,7 +10,7 @@ CHMOD     := chmod +x
 PATCH     := ./patchelf --add-needed
 TOOLS     := tools
 CLIENTSRC := enver.c anti_debug.c mutate.c
-MARCH 	  := $(shell gcc -Q -march=native --help=target | grep -m1 march= | awk '{print $$2}' | tr -d '[:space:]')
+MARCH 	:= $(shell gcc -Q -march=native --help=target | grep -m1 march= | awk '{print $$2}' | tr -d '[:space:]')
 
 # Library targets
 LIBEXEC  := libexec.so
