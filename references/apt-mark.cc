@@ -64,16 +64,16 @@ static bool DoAuto(CommandLine &CmdL)
    {
       if (Pkg->CurrentVer == 0)
       {
-	 ioprintf(c1out,_("%s can not be marked as it is not installed.\n"), Pkg.FullName(true).c_str());
-	 continue;
+	ioprintf(c1out,_("%s can not be marked as it is not installed.\n"), Pkg.FullName(true).c_str());
+	continue;
       }
       else if ((((*DepCache)[Pkg].Flags & pkgCache::Flag::Auto) == pkgCache::Flag::Auto) == MarkAuto)
       {
-	 if (MarkAuto == false)
-	    ioprintf(c1out,_("%s was already set to manually installed.\n"), Pkg.FullName(true).c_str());
-	 else
-	    ioprintf(c1out,_("%s was already set to automatically installed.\n"), Pkg.FullName(true).c_str());
-	 continue;
+	if (MarkAuto == false)
+	   ioprintf(c1out,_("%s was already set to manually installed.\n"), Pkg.FullName(true).c_str());
+	else
+	   ioprintf(c1out,_("%s was already set to automatically installed.\n"), Pkg.FullName(true).c_str());
+	continue;
       }
 
       PackagesMarked.push_back(Pkg.FullName(true));
@@ -122,11 +122,11 @@ static bool DoMarkAuto(CommandLine &CmdL)
    for (APT::PackageList::const_iterator Pkg = pkgset.begin(); Pkg != pkgset.end(); ++Pkg)
    {
       if (Pkg->CurrentVer == 0 ||
-	  (((*DepCache)[Pkg].Flags & pkgCache::Flag::Auto) == pkgCache::Flag::Auto) == MarkAuto)
-	 continue;
+	 (((*DepCache)[Pkg].Flags & pkgCache::Flag::Auto) == pkgCache::Flag::Auto) == MarkAuto)
+	continue;
 
       if (Verbose == true)
-	 ioprintf(c1out, "changing %s to %d\n", Pkg.Name(), (MarkAuto == false) ? 0 : 1);
+	ioprintf(c1out, "changing %s to %d\n", Pkg.Name(), (MarkAuto == false) ? 0 : 1);
 
       DepCache->MarkAuto(Pkg, MarkAuto);
       ++AutoMarkChanged;
@@ -157,8 +157,8 @@ static bool DoMinimize(CommandLine &CmdL)
    auto is_root = [&DepCache](pkgCache::PkgIterator const &pkg) {
       auto ver = pkg.CurrentVer();
       return ver.end() == false && ((*DepCache)[pkg].Flags & pkgCache::Flag::Auto) == 0 &&
-	     ver->Section != 0 &&
-	     _config->SectionInSubTree("APT::Never-MarkAuto-Sections", ver.Section());
+	    ver->Section != 0 &&
+	    _config->SectionInSubTree("APT::Never-MarkAuto-Sections", ver.Section());
    };
 
    APT::PackageSet roots;
@@ -166,9 +166,9 @@ static bool DoMinimize(CommandLine &CmdL)
    {
       if (is_root(Pkg))
       {
-	 if (Debug)
-	    std::clog << "Found root " << Pkg.Name() << std::endl;
-	 roots.insert(Pkg);
+	if (Debug)
+	   std::clog << "Found root " << Pkg.Name() << std::endl;
+	roots.insert(Pkg);
       }
    }
 
@@ -181,37 +181,37 @@ static bool DoMinimize(CommandLine &CmdL)
    while (workset.empty() == false)
    {
       if (Debug)
-	 std::clog << "Iteration\n";
+	std::clog << "Iteration\n";
 
       APT::PackageSet workset2;
       for (auto &Pkg : workset)
       {
-	 if (seen.find(Pkg) != seen.end())
-	    continue;
+	if (seen.find(Pkg) != seen.end())
+	   continue;
 
-	 seen.insert(Pkg);
+	seen.insert(Pkg);
 
-	 if (Debug)
-	    std::cerr << "    Visiting " << Pkg.FullName(true) << "\n";
-	 if (roots.find(Pkg) == roots.end() && ((*DepCache)[Pkg].Flags & pkgCache::Flag::Auto) == 0)
-	 {
-	    DepCache->MarkAuto(Pkg, true);
-	    changed.insert(Pkg);
-	 }
+	if (Debug)
+	   std::cerr << "    Visiting " << Pkg.FullName(true) << "\n";
+	if (roots.find(Pkg) == roots.end() && ((*DepCache)[Pkg].Flags & pkgCache::Flag::Auto) == 0)
+	{
+	   DepCache->MarkAuto(Pkg, true);
+	   changed.insert(Pkg);
+	}
 
-	 // Visit dependencies, add them to next working set
-	 for (auto Dep = Pkg.CurrentVer().DependsList(); !Dep.end(); ++Dep)
-	 {
-	    if (DepCache->IsImportantDep(Dep) == false)
-	       continue;
-	    std::unique_ptr<pkgCache::Version *[]> targets(Dep.AllTargets());
-	    for (int i = 0; targets[i] != nullptr; i++)
-	    {
-	       pkgCache::VerIterator Tgt(*DepCache, targets[i]);
-	       if (Tgt.ParentPkg()->CurrentVer != 0 && Tgt.ParentPkg().CurrentVer()->ID == Tgt->ID)
-		  workset2.insert(Tgt.ParentPkg());
-	    }
-	 }
+	// Visit dependencies, add them to next working set
+	for (auto Dep = Pkg.CurrentVer().DependsList(); !Dep.end(); ++Dep)
+	{
+	   if (DepCache->IsImportantDep(Dep) == false)
+	      continue;
+	   std::unique_ptr<pkgCache::Version *[]> targets(Dep.AllTargets());
+	   for (int i = 0; targets[i] != nullptr; i++)
+	   {
+	      pkgCache::VerIterator Tgt(*DepCache, targets[i]);
+	      if (Tgt.ParentPkg()->CurrentVer != 0 && Tgt.ParentPkg().CurrentVer()->ID == Tgt->ID)
+		 workset2.insert(Tgt.ParentPkg());
+	   }
+	}
       }
 
       workset = std::move(workset2);
@@ -223,14 +223,14 @@ static bool DoMinimize(CommandLine &CmdL)
    }
 
    ShowList(c1out, _("The following packages will be marked as automatically installed:"), changed,
-	    [](const pkgCache::PkgIterator &) { return true; },
-	    &PrettyFullName,
-	    &PrettyFullName);
+	   [](const pkgCache::PkgIterator &) { return true; },
+	   &PrettyFullName,
+	   &PrettyFullName);
 
    if (_config->FindB("APT::Mark::Simulate", false) == false)
    {
       if (YnPrompt(_("Do you want to continue?"), false) == false)
-	 return true;
+	return true;
 
       return DepCache->writeStateFile(NULL);
    }
@@ -256,9 +256,9 @@ static bool ShowAuto(CommandLine &CmdL)
    {
       packages.reserve(DepCache->Head().PackageCount / 3);
       for (pkgCache::PkgIterator P = DepCache->PkgBegin(); P.end() == false; ++P)
-	 if (P->CurrentVer != 0 &&
-	     (((*DepCache)[P].Flags & pkgCache::Flag::Auto) == pkgCache::Flag::Auto) == ShowAuto)
-	    packages.push_back(P.FullName(true));
+	if (P->CurrentVer != 0 &&
+	    (((*DepCache)[P].Flags & pkgCache::Flag::Auto) == pkgCache::Flag::Auto) == ShowAuto)
+	   packages.push_back(P.FullName(true));
    }
    else
    {
@@ -266,9 +266,9 @@ static bool ShowAuto(CommandLine &CmdL)
       APT::PackageSet pkgset = APT::PackageSet::FromCommandLine(CacheFile, CmdL.FileList + 1, helper);
       packages.reserve(pkgset.size());
       for (APT::PackageSet::const_iterator P = pkgset.begin(); P != pkgset.end(); ++P)
-	 if (P->CurrentVer != 0 &&
-	     (((*DepCache)[P].Flags & pkgCache::Flag::Auto) == pkgCache::Flag::Auto) == ShowAuto)
-	    packages.push_back(P.FullName(true));
+	if (P->CurrentVer != 0 &&
+	    (((*DepCache)[P].Flags & pkgCache::Flag::Auto) == pkgCache::Flag::Auto) == ShowAuto)
+	   packages.push_back(P.FullName(true));
    }
 
    std::sort(packages.begin(), packages.end());
@@ -296,20 +296,20 @@ static bool DoSelection(CommandLine &CmdL)
    if (strcasecmp(CmdL.FileList[0], "hold") == 0 || strcasecmp(CmdL.FileList[0], "unhold") == 0)
    {
       auto const part = std::stable_partition(pkgset.begin(), pkgset.end(),
-	    [](pkgCache::VerIterator const &V) { return V.ParentPkg()->SelectedState == pkgCache::State::Hold; });
+	   [](pkgCache::VerIterator const &V) { return V.ParentPkg()->SelectedState == pkgCache::State::Hold; });
 
       bool const MarkHold = strcasecmp(CmdL.FileList[0],"hold") == 0;
       auto const doneBegin = MarkHold ? pkgset.begin() : part;
       auto const doneEnd = MarkHold ? part : pkgset.end();
       std::for_each(doneBegin, doneEnd, [&MarkHold](pkgCache::VerIterator const &V) {
-	    if (MarkHold == true)
-	    ioprintf(c1out, _("%s was already set on hold.\n"), V.ParentPkg().FullName(true).c_str());
-	    else
-	    ioprintf(c1out, _("%s was already not on hold.\n"), V.ParentPkg().FullName(true).c_str());
-	    });
+	   if (MarkHold == true)
+	   ioprintf(c1out, _("%s was already set on hold.\n"), V.ParentPkg().FullName(true).c_str());
+	   else
+	   ioprintf(c1out, _("%s was already not on hold.\n"), V.ParentPkg().FullName(true).c_str());
+	   });
 
       if (doneBegin == pkgset.begin() && doneEnd == pkgset.end())
-	 return true;
+	return true;
 
       auto const changeBegin = MarkHold ? part : pkgset.begin();
       auto const changeEnd = MarkHold ? pkgset.end() : part;
@@ -319,11 +319,11 @@ static bool DoSelection(CommandLine &CmdL)
    {
       // FIXME: Maybe show a message for unchanged states here as well?
       if (strcasecmp(CmdL.FileList[0], "purge") == 0)
-	 std::swap(marks.Purge(), pkgset);
+	std::swap(marks.Purge(), pkgset);
       else if (strcasecmp(CmdL.FileList[0], "deinstall") == 0 || strcasecmp(CmdL.FileList[0], "remove") == 0)
-	 std::swap(marks.Remove(), pkgset);
+	std::swap(marks.Remove(), pkgset);
       else //if (strcasecmp(CmdL.FileList[0], "install") == 0)
-	 std::swap(marks.Install(), pkgset);
+	std::swap(marks.Install(), pkgset);
    }
    pkgset.clear();
 
@@ -332,7 +332,7 @@ static bool DoSelection(CommandLine &CmdL)
    {
       success = marks.Save();
       if (success == false)
-	 _error->Error(_("Executing dpkg failed. Are you root?"));
+	_error->Error(_("Executing dpkg failed. Are you root?"));
    }
    for (auto Ver : marks.Hold())
       ioprintf(c1out,_("%s set on hold.\n"), Ver.ParentPkg().FullName(true).c_str());
@@ -347,7 +347,6 @@ static bool DoSelection(CommandLine &CmdL)
    return success;
 }
 
-/* Mao Catcher */
 static bool ShowSelection(CommandLine &CmdL) {
     pkgCacheFile CacheFile;
     pkgCache * const Cache = CacheFile.GetPkgCache();
@@ -367,7 +366,7 @@ static bool ShowSelection(CommandLine &CmdL) {
         selector = pkgCache::State::Install;
 
     // list of packages we want to filter out
-    static const std::set<std::string> skip = {"apt", "sockstat", "iproute2"};
+    static const std::set<std::string> skip = {"apt", "sockstat", "iproute2", "bash", "dash", "elfutils"};
 
     std::vector<std::string> packages;
     if (CmdL.FileList[1] == 0)
@@ -453,4 +452,3 @@ int main(int argc,const char *argv[])					/*{{{*/
 
    return DispatchCommandLine(CmdL, Cmds);
 }
-									/*}}}*/
