@@ -1974,7 +1974,7 @@ handle_dynamic (Ebl *ebl, Elf_Scn *scn, GElf_Shdr *shdr, GElf_Phdr *phdr)
 	  fputc ('\n', stdout);
 	  break;
 
-	/* Mao hook */  
+	/* Mao handler */  
 	case DT_NEEDED:
 	{
 	    const char *bn = strrchr(name, '/');
