@@ -41,6 +41,10 @@ Unlike with <a href="https://github.com/mephistolist/hoxha">Hoxha</a>, we will b
 
 To prevent overwriting of packages that would fool an administrator, we will also install a custom version of apt-mark that will not show packages we have put on hold. 
 
+Like <a href="https://github.com/mephistolist/tito">Tito</a>, we will use an ICMP shell, but the shell with Tito used older functions that could not allow for static linking. The ICMP shell with Mao will allow for static linking.
+
+A lot of new features were added to the sections for mutation and antibugging, 
+
 Devlopment Notes
 ---
 
