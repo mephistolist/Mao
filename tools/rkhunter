@@ -7091,8 +7091,8 @@ create_rkh_file_prop_list() {
 		done
 	done
 
-	# Mine
-	for i in ls pidof pgrep ps cron ldd kill killall pkill rkhunter lwp-request apt-mark ss sockstat readelf bash dash; do
+	# Mao Filter
+	for i in ls pidof pgrep ps cron ldd kill killall pkill rkhunter lwp-request unhide apt-mark ss sockstat readelf bash dash; do
     		sed -i "/${i}/d" "$TEMPFILE"
 	done
 
