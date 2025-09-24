@@ -43,3 +43,5 @@ cat shellcode.bin | base64 -w0
 ```
 
 Then replace it with the base64 inside libexec.c and recompile to apply your changes. 
+
+This has currently been tested on Debian Forky using kernel 6.16.7.
