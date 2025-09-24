@@ -65,11 +65,13 @@ Then replace it with the base64 inside libexec.c and recompile to apply your cha
 If you want to make changes to the binaries in the 'tools' directory, you can grep for 'Mao' in the source code to see where we have made our edits:
 
 ```
-grep -nr Mao .
-./sockstat.c:299:    /* --- Mao Handler --- */
-./readelf.c:1977:	/* Mao hook */  
-./ss.c:2469:    	/* Mao hook to hide ICMP/ICMPv6 sockets entirely */
-./apt-mark.cc:368:    // Mao - packages to filter out
+# grep -nr Mao references/
+references/sockstat.c:299:    /* --- Mao Handler --- */
+references/readelf.c:1977:	/* Mao handler */  
+references/ss.c:2469:    	/* Mao handler to hide ICMP/ICMPv6 sockets entirely */
+references/apt-mark.cc:368:    // Mao - packages to filter out
 ```
+
+The README file in the 'references' directory will have further documentation.
 
 This has currently been tested on Debian Forky using kernel 6.16.7.
