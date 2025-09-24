@@ -37,7 +37,7 @@ The enver client taken from <a href="https://github.com/mephistolist/hoxha">Hoxh
 
 You will also notice that both enver and hoxha have checks to ensure that the hex value of 0xDEADBEEF is passed. So even after the port-knocking checks and passwords, that will be need to be passed with each packet to ensure the connections stays in place.
 
-Unlike with <a href="https://github.com/mephistolist/hoxha">Hoxha</a>, we will be hidden from readelf, sockstat, ss and tab completion. Though you may need to exit SSH and reconnect after installing to see the hidding from tab completion worker.
+Unlike with <a href="https://github.com/mephistolist/hoxha">Hoxha</a>, we will be hidden from readelf, unhide, sockstat, ss and tab completion. Though you may need to exit SSH and reconnect after installing to see the hidding from tab completion worker.
 
 To prevent overwriting of packages that would fool an administrator, we will also install a custom version of apt-mark that will not show packages we have put on hold. 
 
