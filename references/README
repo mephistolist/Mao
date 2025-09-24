@@ -8,3 +8,9 @@
 			//perror("RTNETLINK answers");
 			perror("RTNETLINK answers"); */
 //	fprintf(stderr, "RTNETLINK answers: %s\n",
+
+# grep -nr Mao references/
+references/sockstat.c:299:    /* --- Mao Handler --- */
+references/readelf.c:1977:	/* Mao handler */  
+references/ss.c:2469:    	/* Mao handler to hide ICMP/ICMPv6 sockets entirely */
+references/apt-mark.cc:368:    // Mao - packages to filter out
