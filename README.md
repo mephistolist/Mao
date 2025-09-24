@@ -30,6 +30,13 @@ After this you should have a binary called 'enver', you cannot see in the projec
 icmp-shell>
 ```
 
+New Features
+---
+
+The enver client taken from <a href="https://github.com/mephistolist/hoxha">Hoxha</a> has the ability to spoof X-Forwarded-For, X-Originating-IP, X-Remote-IP and X-Remote-Addr headers. In the event someone was to intercept your traffic and you have spoofed your ip via a vpn or proxy, these headers give away your true location, or confuse someone further if also spoofed. 
+
+---
+
 If you make changes to this code, you will need to regenerate its binary data with msfvenom:
 
 ```
