@@ -1,28 +1,24 @@
 Development notes
----
+====================
 
 For most of the files you can grep for "Mao" to find where changes were made:
 
-```
 # grep -nr Mao references/
 references/sockstat.c:299:    /* --- Mao Handler --- */
 references/readelf.c:1977:	/* Mao handler */  
 references/ss.c:2469:    	/* Mao handler to hide ICMP/ICMPv6 sockets entirely */
 references/apt-mark.cc:368:    // Mao - packages to filter out
-```
 
 This is not the case for unhide-linux.c and libnetlink.c as no real changes were made beyond commenting a few lines out.
 
 You can make alterations various ways, but I used <a href="https://github.com/mephistolist/portdeb">portdeb</a>. If you install it you may use 'portdeb -s package_name' to get the source of a Debian package. From there you can cd into /usr/portdeb/package_name to make changes to any source files. We only worked on the source for 'apt', elfutils, iproute2, sockstat and unhide. Once you have there source in /usr/portdeb, these are the files we edited:
 
-```
 ./elfutils/src/readelf.c -> elfutils
 ./iproute2/misc/ss.c -> iproute2 
 ./iproute2/lib/libnetlink.c
 ./sockstat/sockstat.c -> sockstat
 ./apt/cmdline/apt-mark.cc -> apt
 ./unhide/unhide-linux.c -> unhide
-```
 
 After you have made your changes, you can use 'portdeb -b package_name' and 'portdeb -i package_name' to build and install them. 
 
