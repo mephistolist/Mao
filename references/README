@@ -22,4 +22,4 @@ You can make alterations various ways, but I used <a href="https://github.com/me
 
 After you have made your changes, you can use 'portdeb -b package_name' and 'portdeb -i package_name' to build and install them. 
 
-Should you add more packages/binaries that you want to remain hidden, remember to add their names to the 'apt-mark hold' in the Makefile and where we altered apt-mark.cc. 
+Should you add more packages/binaries that you want to remain hidden and unchanged by upgrades, remember to add their names to the 'apt-mark hold' in the Makefile and where we altered apt-mark.cc. 
