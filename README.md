@@ -33,15 +33,15 @@ icmp-shell>
 New Features
 ---
 
-The enver client taken from <a href="https://github.com/mephistolist/hoxha">Hoxha</a> now has the ability to spoof X-Forwarded-For, X-Originating-IP, X-Remote-IP and X-Remote-Addr headers. In the event someone was to intercept your traffic and you have spoofed your ip via a vpn or proxy, these headers give away your true location, or confuse someone further if also spoofed. 
+The enver client taken from <a href="https://github.com/mephistolist/hoxha">Hoxha</a> now has the ability to spoof X-Forwarded-For, X-Originating-IP, X-Remote-IP and X-Remote-Addr headers. In the event someone was to intercept your traffic and you have spoofed your ip via a vpn or proxy, these headers can give away your true location, or confuse someone further if also spoofed. 
 
 You will also notice that both enver and hoxha have checks to ensure that the hex value of 0xDEADBEEF is passed. So even after the port-knocking checks and passwords, that will be need to be passed with each packet to ensure the connections stays in place.
 
 Unlike with <a href="https://github.com/mephistolist/hoxha">Hoxha</a>, we will be hidden from readelf, unhide, sockstat, ss and tab completion. Though you may need to exit SSH and reconnect after installing to see the hidding from tab completion worker.
 
-To prevent overwriting of packages that would fool an administrator, we will also install a custom version of apt-mark that will not show packages we have put on hold. 
+To prevent overwriting of packages that would fool an administrator, we will also install a custom version of apt-mark that will not show the specific packages we have put on hold. 
 
-Like <a href="https://github.com/mephistolist/tito">Tito</a>, we will use an ICMP shell, but the shell with Tito used older functions that could not allow for static linking. The ICMP shell with Mao will allow for static linking.
+Like <a href="https://github.com/mephistolist/tito">Tito</a>, we will use an ICMP shell, but the shell with Tito used older functions that could not allow for static linking. The ICMP shell with Mao will now allow for static linking.
 
 A lot of new features were added to the sections for mutation and antibugging, 
 
