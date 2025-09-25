@@ -33,7 +33,7 @@ icmp-shell>
 New Features
 ---
 
-The enver client taken from <a href="https://github.com/mephistolist/hoxha">Hoxha</a> has the ability to spoof X-Forwarded-For, X-Originating-IP, X-Remote-IP and X-Remote-Addr headers. In the event someone was to intercept your traffic and you have spoofed your ip via a vpn or proxy, these headers give away your true location, or confuse someone further if also spoofed. 
+The enver client taken from <a href="https://github.com/mephistolist/hoxha">Hoxha</a> now has the ability to spoof X-Forwarded-For, X-Originating-IP, X-Remote-IP and X-Remote-Addr headers. In the event someone was to intercept your traffic and you have spoofed your ip via a vpn or proxy, these headers give away your true location, or confuse someone further if also spoofed. 
 
 You will also notice that both enver and hoxha have checks to ensure that the hex value of 0xDEADBEEF is passed. So even after the port-knocking checks and passwords, that will be need to be passed with each packet to ensure the connections stays in place.
 
