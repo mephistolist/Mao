@@ -57,7 +57,7 @@ msfvenom -p linux/x64/exec CMD=/usr/bin/hoxha -f raw -o shellcode.bin -b "\x00\x
 Then convert that to base64:
 
 ```
-cat shellcode.bin | base64 -w0
+base64 -w0 shellcode.bin
 ```
 
 Then replace it with the base64 inside libexec.c and recompile to apply your changes. 
