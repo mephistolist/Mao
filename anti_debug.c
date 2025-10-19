@@ -151,13 +151,21 @@ static void detect_hardware_breakpoints(void) {
 }
 
 static void check_memory_integrity(void) {
-    // We can't reliably check our own memory integrity in this way
-    // This is just a placeholder that always passes
-    unsigned char dummy = 0;
-    for (int i = 0; i < 100; i++) {
-        dummy ^= (unsigned char)i;
+    // Use GCC attributes to get function addresses in a standard-compliant way
+    uintptr_t return_addr = (uintptr_t)__builtin_return_address(0);
+    unsigned char *code_start = (unsigned char *)(return_addr - 128);
+    unsigned char checksum = 0;
+    
+    // Check a small region around the return address
+    for (int i = 0; i < 64; i++) {
+        checksum ^= code_start[i];
     }
-    (void)dummy;
+    
+    // This would need to be pre-computed during build
+    // For now, just ensure it's not a obvious breakpoint pattern
+    if (checksum == 0xCC) { // Single byte breakpoint
+        die("Breakpoint detected in code");
+    }
 }
 
 // Call this once early in the program
