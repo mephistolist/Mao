@@ -17,27 +17,12 @@
 #include <errno.h>
 #include <pthread.h>
 #include <cpuid.h>
+#include "includes/mutate.h"
 
 #define MAX_LEN 128
 #define PATH_MAX 200
 
 static unsigned long long internal_seed = 0;
-
-// Prototypes
-void mutate1(char *s);
-void mutate2(char *s);
-void mutate3(char *s);
-void mutate4(char *s);
-void mutate5(char *s);
-void mutate6(char *s);
-void mutate7(char *s);
-void mutate8(char *s);
-void junk_memory(void);
-unsigned char internal_random_byte(void);
-void shuffle(void (**funcs)(char *), int count);
-void obscure_memory_presence(void);
-void temporal_obfuscation(void);
-void obscure_system_calls(void);
 
 void *background_entropy(void *arg) {
     (void)arg;
@@ -120,24 +105,25 @@ void get_entropy(unsigned char *buf, size_t len) {
 }
 
 // Add memory obfuscation techniques
-void obscure_memory_presence() {
-    // Allocate and immediately free memory to create fragmentation
-    for (int i = 0; i < 10; i++) {
-        size_t size = 64 + (internal_random_byte() % 1024);
-        char *temp = malloc(size);
-        if (temp) {
-            get_entropy((unsigned char *)temp, size);
-            free(temp);
+void obfuscate_memory_presence(void) {
+    // Allocate decoy memory regions that look like code
+    size_t size = 4096;
+    void *decoy = mmap(NULL, size, PROT_READ | PROT_WRITE, 
+                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (decoy != MAP_FAILED) {
+        // Fill with patterns that look like function prologues
+        unsigned char *p = (unsigned char *)decoy;
+        for (size_t i = 0; i < size - 8; i += 8) {
+            p[i] = 0x55;    // push rbp
+            p[i+1] = 0x48;  // mov rbp, rsp
+            p[i+2] = 0x89;
+            p[i+3] = 0xE5;
+            p[i+4] = 0xC3;  // ret (short function)
+            p[i+5] = 0x90;  // nop
+            p[i+6] = 0x90;  // nop  
+            p[i+7] = 0x90;  // nop
         }
-    }
-    
-    // Create memory artifacts that look like normal program behavior
-    int *dummy_array = malloc(256 * sizeof(int));  // Remove volatile
-    if (dummy_array) {
-        for (int i = 0; i < 256; i++) {
-            dummy_array[i] = internal_random_byte();
-        }
-        free(dummy_array);
+        munmap(decoy, size);
     }
 }
 
@@ -428,7 +414,7 @@ int mutate_main() {
     (void)val;
     //printf("JIT Code Result: %d\n", val);
     
-    obscure_memory_presence();
+    obfuscate_memory_presence();
     obscure_system_calls();
     temporal_obfuscation();
 
