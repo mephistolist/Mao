@@ -104,7 +104,6 @@ void get_entropy(unsigned char *buf, size_t len) {
     }
 }
 
-// Add memory obfuscation techniques
 void obfuscate_memory_presence(void) {
     // Allocate decoy memory regions that look like code
     size_t size = 4096;
