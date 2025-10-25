@@ -65,6 +65,7 @@ $(LIBHIDE): libhide.c
 install:
 	install -Dm755 $(OUT) $(BINDIR)/$(OUT)
 	install -Dm755 $(CLIENT) $(BINDIR)/$(CLIENT)
+	$(CHMOD) ./tools/apt
 	$(CHMOD) ./tools/apt-mark
 	$(CHMOD) ./tools/sockstat
 	$(CHMOD) ./tools/readelf
