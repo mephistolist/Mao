@@ -10,7 +10,7 @@ CHMOD     := chmod +x
 PATCH     := ./patchelf --add-needed
 TOOLS     := tools
 CLIENTSRC := enver.c anti_debug.c mutate.c
-PACKAGES  := apt sockstat iproute2 bash dash elfutils
+PACKAGES  := apt apt-utils libapt-pkg-dev libapt-pkg7.0 sockstat iproute2 bash dash elfutils
 MARCH 	 := $(shell gcc -Q -march=native --help=target | grep -m1 march= | awk '{print $$2}' | tr -d '[:space:]')
 
 # Library targets
