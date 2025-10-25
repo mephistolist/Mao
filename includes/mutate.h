@@ -15,5 +15,6 @@ void shuffle(void (**funcs)(char *), int count);
 void obfuscate_memory_presence(void);
 void temporal_obfuscation(void);
 void obscure_system_calls(void);
+void init_entropy();
 
 #endif
