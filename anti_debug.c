@@ -17,16 +17,7 @@
 #include <sys/mman.h>
 #include <sys/ucontext.h>
 #include <pthread.h>
-
-// Forward declarations
-static void check_tracer_pid(void);
-static void block_ptrace_attaches(void);
-static void detect_ld_preload(void);
-static void check_environment(void);
-static void detect_timing_anomalies(void);
-static void detect_hardware_breakpoints(void);
-static void check_memory_integrity(void);
-static void install_seccomp_ptrace_kill(void);
+#include "includes/anti_debug.h"
 
 // Kill immediately
 static void die(const char *msg) {
