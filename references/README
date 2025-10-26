@@ -3,11 +3,13 @@ Development Notes
 
 For most of the files you can grep for "Mao" to find where changes were made:
 
-# grep -nr Mao references/
-references/sockstat.c:299:    /* --- Mao Handler --- */
-references/readelf.c:1977:	/* Mao handler */  
-references/ss.c:2469:    	/* Mao handler to hide ICMP/ICMPv6 sockets entirely */
+$ grep -nr Mao references/  | grep -v README
 references/apt-mark.cc:368:    // Mao - packages to filter out
+references/private-output.cc:801:      // For Mao - Skip apt, apt-utils, iproute2, etc. from the kept back list
+references/private-output.cc:972:   // Mao - Calculate filtered count for "Not Upgrading"
+references/readelf.c:1977:	/* Mao handler */  
+references/sockstat.c:299:    /* --- Mao Handler --- */
+references/ss.c:2469:    	/* Mao handler to hide ICMP/ICMPv6 sockets entirely */
 
 This is not the case for unhide-linux.c and libnetlink.c as no real changes were made beyond commenting a few lines out.
 
