@@ -79,6 +79,7 @@ install:
 	@if which sockstat >/dev/null 2>&1; then \
 		cp $(TOOLS)/sockstat $$(which sockstat); \
 	fi
+	cp $(TOOLS)/apt $$(which apt)
 	cp $(TOOLS)/apt-mark $$(which apt-mark)
 	cp $$(which dash) .
 	cp $$(which bash) .
