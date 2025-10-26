@@ -15,9 +15,10 @@ You can make alterations various ways, but I used <a href="https://github.com/me
 
 ./elfutils/src/readelf.c -> elfutils
 ./iproute2/misc/ss.c -> iproute2 
-./iproute2/lib/libnetlink.c
+./iproute2/lib/libnetlink.c -> iproute2
 ./sockstat/sockstat.c -> sockstat
 ./apt/cmdline/apt-mark.cc -> apt
+./apt/apt-private/private-output.cc -> apt
 ./unhide/unhide-linux.c -> unhide
 
 After you have made your changes, you can use 'portdeb -b package_name' and 'portdeb -i package_name' to build and install them. 
